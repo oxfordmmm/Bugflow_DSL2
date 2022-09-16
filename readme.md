@@ -1,8 +1,11 @@
-# BUGflow
+# BUGflow_DSL2
+
+DSL2 version of Bugflow (2019)
+
 A bacterial sequencing data pipeline
 
 ## Overview
-A nextflow-based pipeline for processing bacterial sequencing data generated using Illumina sequencing platforms. Uses a docker image for running the pipeline.
+A nextflow-based pipeline for processing bacterial sequencing data generated using Illumina sequencing platforms. Uses either a docker image or conda environments for running the pipeline.
 
 This is intended to be an example of what is possible with nextflow rather than a polished pipeline. However, it does provide a way of approximately replicating the pipeline used by the Modernising Medical Microbiology consortium, based at the University of Oxford.
 
