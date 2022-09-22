@@ -1,5 +1,5 @@
 # BUGflow DSL2
-A bacterial sequencing data pipeline
+A bacterial sequencing data processing pipeline
 
 ## Overview
 DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling and de novo assembly of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
@@ -55,10 +55,16 @@ To clean and de novo assemble raw Illumina reads:
 nextflow run main_bugflow_dsl2.nf -entry shovill --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]"
 ```
 
-To call high-quality SNPs from your reads:
+To call high-quality SNPs from clean reads:
 
 ```
-nextflow run main_bugflow_dsl2.nf -entry shovill --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
+nextflow run main_bugflow_dsl2.nf -entry snippy_fastq --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
+```
+
+To call high-quality SNPs from assembled genomes (contigs):
+
+```
+nextflow run main_bugflow_dsl2.nf -entry snippy_fasta --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
 ```
 
 ### Running the subworkflows on example data
