@@ -7,16 +7,16 @@ DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant callin
 
 The pipeline uses these tools:
 
-#QC
+QC
  - Fastp
  - FastQC
  - MultiQC
  - Quast
 
-#Mapping and Variant calling
+Mapping and Variant calling
  - snippy
  
-#Assembly
+Assembly
  - shovill (spades and pilon) 
 
 ## Installation
@@ -25,20 +25,18 @@ Requires a local installation of
 * Java version 8 or later (required for nextflow)
 * Nextflow - https://www.nextflow.io
 
-#Bioconda
 Tools from bug-flow DSL2 are available from Bioconda
 ```
 conda create -n bug-flow_DSL2 -c bioconda fastqc fastp multiqc shovill quast snippy
 conda activate bug-flow_DSL2
 ```
 
-#Clone the repository
 Clone the repository locally
 ```
 git clone https://https://github.com/aedecano/bug-flow_DSL2.git
 ```
 
-#Get the docker image
+Get the docker image
 This can be pulled from docker hub
 ```
 docker pull davideyre/bug-flow
@@ -73,7 +71,7 @@ To call high-quality SNPs from assembled genomes (contigs):
 nextflow run main_bugflow_dsl2.nf -entry snippy_fasta --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
 ```
 
-### Running the subworkflows on example data
+## Running the subworkflows on example data
 
 The "example_data" folder included in this repository contains 2 sets of fastq files.
 
