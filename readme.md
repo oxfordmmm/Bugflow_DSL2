@@ -9,9 +9,9 @@ The pipeline uses these tools:
 
 QC
  - Fastp v.0.23.2
- - FastQC v0.11.9
+ - FastQC v.0.11.9
  - MultiQC v.1.12
- - Quast v5.0.2
+ - Quast v.5.0.2
 
 Mapping and Variant calling
  - snippy v.4.6
