@@ -8,16 +8,16 @@ DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant callin
 The pipeline uses these tools:
 
 QC
- - Fastp
- - FastQC
- - MultiQC
- - Quast
+ - Fastp v.0.23.2
+ - FastQC v0.11.9
+ - MultiQC v.1.12
+ - Quast v5.0.2
 
 Mapping and Variant calling
- - snippy
+ - snippy v.4.6
  
 Assembly
- - shovill (spades and pilon) 
+ - shovill 1.1.0 (spades and pilon) 
 
 ## Installation
 Requires a local installation of 
