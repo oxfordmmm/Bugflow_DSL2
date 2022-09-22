@@ -25,20 +25,20 @@ Requires a local installation of
 * Java version 8 or later (required for nextflow)
 * Nextflow - https://www.nextflow.io
 
-###Bioconda
+#Bioconda
 Tools from bug-flow DSL2 are available from Bioconda
 ```
 conda create -n bug-flow_DSL2 -c bioconda fastqc fastp multiqc shovill quast snippy
 conda activate bug-flow_DSL2
 ```
 
-### Clone the repository
+#Clone the repository
 Clone the repository locally
 ```
 git clone https://https://github.com/aedecano/bug-flow_DSL2.git
 ```
 
-### Get the docker image
+#Get the docker image
 This can be pulled from docker hub
 ```
 docker pull davideyre/bug-flow
