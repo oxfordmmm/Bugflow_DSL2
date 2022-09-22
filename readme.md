@@ -58,7 +58,7 @@ nextflow run main_bugflow_dsl2.nf -entry shovill --reads "[path-to-reads]/*{1,2}
 To call high-quality SNPs from your reads:
 
 ```
-nextflow run main_bugflow_dsl2.nf -entry shovill --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence].fasta"
+nextflow run main_bugflow_dsl2.nf -entry shovill --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
 ```
 
 ### Running the subworkflows on example data
