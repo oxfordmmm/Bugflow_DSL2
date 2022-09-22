@@ -17,7 +17,7 @@ Mapping and Variant calling
  - snippy v.4.6
  
 Assembly
- - shovill 1.1.0 (spades and pilon) 
+ - shovill v.1.1.0 (spades and pilon) 
 
 ## Installation
 Requires a local installation of 
