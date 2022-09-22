@@ -2,7 +2,7 @@
 A bacterial sequencing data pipeline
 
 ## Overview
-DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling and de novo assembly of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium, based at the University of Oxford.
+DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling and de novo assembly of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
 
 
 
