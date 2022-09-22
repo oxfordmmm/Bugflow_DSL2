@@ -29,7 +29,7 @@ Requires a local installation of
 ### Clone the repository
 Clone the repository locally
 ```
-git clone https://github.com/davideyre/bug-flow.git
+git clone https://https://github.com/aedecano/bug-flow_DSL2.git
 ```
 
 ### Get the docker image
