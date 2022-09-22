@@ -5,7 +5,6 @@ A bacterial sequencing data processing pipeline
 DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling and de novo assembly of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
 
 
-
 The pipeline uses these tools:
 
 #QC
@@ -25,6 +24,13 @@ Requires a local installation of
 * Docker - https://www.docker.com/get-started
 * Java version 8 or later (required for nextflow)
 * Nextflow - https://www.nextflow.io
+
+###Bioconda
+Tools from bug-flow DSL2 are available from Bioconda
+```
+conda create -n bug-flow_DSL2 -c bioconda fastqc fastp multiqc shovill quast snippy
+conda activate bug-flow_DSL2
+```
 
 ### Clone the repository
 Clone the repository locally
