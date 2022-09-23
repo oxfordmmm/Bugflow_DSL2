@@ -10,10 +10,10 @@ QC
  - Quast
 
 Mapping and Variant calling
- - snippy
+ - Snippy
  
 Assembly
- - shovill (spades) 
+ - Shovill (spades) 
 */
 
 // enable DSL2
