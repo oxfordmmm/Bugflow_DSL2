@@ -33,7 +33,7 @@ Install Miniconda locally first,
 wget https://repo.anaconda.com/miniconda/Miniconda3-py37_4.12.0-Linux-x86_64.sh
 bash Miniconda3-py37_4.12.0-Linux-x86_64.sh
 ```
-then create a bug-flow_DSL2 conda environments with all the software needed in the pipeline.
+then create the bug-flow_DSL2 conda environment with all the software needed in the pipeline.
 ```
 conda create -n bug-flow_DSL2 -c bioconda fastqc fastp multiqc shovill quast snippy
 conda activate bug-flow_DSL2
