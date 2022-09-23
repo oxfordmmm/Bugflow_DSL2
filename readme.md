@@ -81,7 +81,7 @@ nextflow run main_bugflow_dsl2.nf -entry snippy_fasta --reads "[path-to-reads]/*
 
 ## Running the subworkflows on example data
 
-The "example_data" folder included in this repository contains 2 sets of fastq files.
+The "example_data" folder included in this repository should contain 2 sets of fastq files. Download these pairs from ENA.
 
 ```
 cd example_data
