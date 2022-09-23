@@ -109,7 +109,7 @@ workflow snippy_fastq {
     
     main:
     FASTP(reads)
-    SNIPPYFASTQ(FASTP.out.reads[0].mix(reads[1]).collect(), refFasta)
+    SNIPPYFASTQ(FASTP.out.reads, refFasta)
     //SNIPPYFASTQ(reads.collect(), refFasta)
     //emit:
     //SNIPPYFASTQ.out // results
