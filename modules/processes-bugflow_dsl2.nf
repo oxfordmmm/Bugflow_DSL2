@@ -1,9 +1,19 @@
 #!/usr/bin/env nextflow
 
-// enable DSL2
+/*
+#==============================================
+Enable DSL2
+#==============================================
+*/
+
 nextflow.enable.dsl = 2
 
-// initial fastQC
+/*
+#==============================================
+QC of raw reads
+#==============================================
+*/
+
 process RAWFASTQC {
 	cpus 4
 
@@ -27,8 +37,11 @@ process RAWFASTQC {
 
 }
 
-
-//Read cleaning with Fastp
+/*
+#==============================================
+Read cleaning with Fastp
+#==============================================
+*/
 
 process FASTP {
 	cpus 8
@@ -56,7 +69,11 @@ process FASTP {
 
 //return
 
-// QC clean reads
+/*
+#==============================================
+QC clean reads
+#==============================================
+*/
 
 process CLEANFASTQC {
 	cpus 4
@@ -81,6 +98,12 @@ process CLEANFASTQC {
 
 //return
 
+/*
+#==============================================
+Collate and summarize all read QC files
+#==============================================
+*/
+
 process MULTIQC {
 	
 	//conda '/home/ubuntu/miniconda3/envs/multiqc_env'
@@ -104,6 +127,11 @@ process MULTIQC {
     """
 }
 
+/*
+#==============================================
+De novo assembly
+#==============================================
+*/
 
 process ASSEMBLY {
   	cpus 8
@@ -128,22 +156,34 @@ process ASSEMBLY {
   	"""
 }
 
+/*
+#==============================================
+QC assembled genomes
+#==============================================
+*/
+
 process QUAST  {
 	tag { " QC assembly using Quast" }
     
     publishDir "$params.outdir/quast", mode: 'symlink'
     
     input:
-    path("*_contigs.fa")  
+    path(assembly)  
     
     output:
-    path("quast")
+    path("quast_${assembly}")
 
     script:
     """
-    quast --threads ${task.cpus} --output-dir quast *.fa
+    quast.py --threads ${task.cpus} ${assembly} -o quast_${assembly}
     """
 }
+
+/*
+#===============================================
+Read mapping and SNP calling from Illumina reads
+#===============================================
+*/
 
 process SNIPPYFASTQ {
 	cpus 4
@@ -167,6 +207,52 @@ process SNIPPYFASTQ {
 
 }
 
+
+process SNIPPYFASTQ1 {
+	cpus 4
+
+	tag { "call snps from FQs: ${uuid}" }
+
+	//conda '/home/ubuntu/miniconda3/envs/snippy_env'
+	    
+	publishDir "$params.outdir/snps/", mode: "symlink"
+
+    input:
+    tuple val(uuid), path(reads)
+    path(refFasta)
+
+    output:
+	tuple val(uuid), path("${uuid}_snippy/${uuid}.tab")              , emit: tab
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.csv")              , emit: csv
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.html")             , emit: html
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.vcf")              , emit: vcf
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.bed")              , emit: bed
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.gff")              , emit: gff
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.bam")              , emit: bam
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.bam.bai")          , emit: bai
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.log")              , emit: log
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.aligned.fa")       , emit: aligned_fa
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.consensus.fa")     , emit: consensus_fa
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.consensus.subs.fa"), emit: consensus_subs_fa
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.raw.vcf")          , emit: raw_snps_vcf
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.filt.vcf")         , emit: filt_snps_vcf
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.vcf.gz")           , emit: vcf_gz
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.vcf.gz.csi")       , emit: vcf_csi
+    tuple val(uuid), path("${uuid}_snippy/${uuid}.txt")              , emit: txt
+    
+
+    """
+    snippy --cpus $task.cpus --outdir ${uuid}_snippy --prefix ${uuid} --reference ${refFasta} --R1 ${reads[0]} --R2 ${reads[1]} 
+    """
+
+}
+
+/*
+#==================================================
+Read mapping and SNP calling from assembled contigs
+#==================================================
+*/
+
 process SNIPPYFASTA {
 	cpus 4
 
@@ -187,6 +273,12 @@ process SNIPPYFASTA {
     snippy --cpus $task.cpus --report --outdir $uuid --prefix $uuid --reference ${refFasta} --ctgs $fasta 
     """
 }
+
+/*
+#==================================================
+SNP alignment
+#==================================================
+*/
 
 process SNIPPYCORE {
     tag { "create snp alignments: SnippyCore" }
