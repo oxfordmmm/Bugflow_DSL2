@@ -28,7 +28,7 @@ Modules
 include { RAWFASTQC; FASTP; CLEANFASTQC; MULTIQC  } from './modules/processes-bugflow_dsl2.nf'
 include { ASSEMBLY } from './modules/processes-bugflow_dsl2.nf'
 include { QUAST } from './modules/processes-bugflow_dsl2.nf'
-include { SNIPPYFASTQ1 } from './modules/processes-bugflow_dsl2.nf'
+include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
 
@@ -39,7 +39,6 @@ Parameters
 */
 
 params.ref = " "
-params.index = " "
 params.reads = " "
 params.outdir = " "
 params.contigs = " "
@@ -50,13 +49,14 @@ Channels
 #==============================================
 */
 
-Channel.fromPath(params.ref, checkIfExists:true)
-       .set{refFasta}
+//Channel.fromFilePairs(params.reads, checkIfExists: true)
+       //.map{it}
        //.view()
+       //.set{reads}
 
-Channel.fromFilePairs(params.reads, checkIfExists: true)
-       .map{it}
-       .set{reads}
+//Channel.fromPath(params.ref, checkIfExists:true)
+        //.view()       
+       //.set{refFasta}
 
 //Channel.fromPath(params.contigs, checkIfExists:true)
        //.set{assembly}
@@ -71,6 +71,10 @@ Workflows
 */
 
 workflow shovill {
+    Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
     
     main:
     RAWFASTQC(reads)
@@ -79,29 +83,54 @@ workflow shovill {
     MULTIQC(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
     ASSEMBLY(FASTP.out.reads)
     QUAST(ASSEMBLY.out)
+    MULTIQC(QUAST.out.collect())
 }
 
 //return
 
-workflow snippy_fastq {
-    
-    main:
-    //FASTP(reads)
-    //SNIPPYFASTQ(FASTP.out.reads, refFasta)
-    SNIPPYFASTQ1(reads, refFasta)
-    //emit:
-    //SNIPPYFASTQ1.out // results
-}       
+workflow qc_contigs {
+    Channel.fromPath(params.contigs, checkIfExists:true)
+           //.view()
+           .set{assembly}
+    main:       
+    QUAST(assembly)
+    MULTIQC(QUAST.out.collect())
+}
 
-workflow snippy_fasta {
+workflow snippy_fastq {
+    Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+    
+    Channel.fromPath(params.ref, checkIfExists:true)
+           //.view()       
+           .set{refFasta}
     
     main:
     FASTP(reads)
-    ASSEMBLY (FASTP.out.reads)
-    SNIPPYFASTA(ASSEMBLY.out, refFasta)
+    SNIPPYFASTQ(FASTP.out.reads[0].mix(reads[1]).collect(), refFasta)
+    //SNIPPYFASTQ(reads.collect(), refFasta)
+    //emit:
+    //SNIPPYFASTQ.out // results
+}       
+
+workflow snippy_fasta {
+    Channel.fromPath(params.contigs, checkIfExists:true)
+           //.view()
+           .set{assembly}
+
+    Channel.fromPath(params.ref, checkIfExists:true)
+           //.view()       
+           .set{refFasta}
+
+    main:
+    SNIPPYFASTA(assembly, refFasta)
+    
     emit:
     SNIPPYFASTA.out // results
 }  
+
 
 //return
 
@@ -111,6 +140,4 @@ workflow  snippy_core {
     SNIPPYCORE(SNIPPYFASTQ.out.collect(), refFasta)        
 }
 
-workflow qc_contigs {
-    QUAST(assembly)
-}
+
