@@ -16,56 +16,69 @@ Assembly
  - shovill (spades) 
 */
 
-
 // enable DSL2
 nextflow.enable.dsl = 2
 
-//modules
+/*
+#==============================================
+Modules
+#==============================================
+*/
+
 include { RAWFASTQC; FASTP; CLEANFASTQC; MULTIQC  } from './modules/processes-bugflow_dsl2.nf'
 include { ASSEMBLY } from './modules/processes-bugflow_dsl2.nf'
 include { QUAST } from './modules/processes-bugflow_dsl2.nf'
-include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
+include { SNIPPYFASTQ1 } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
-include { INDEXREFERENCE; BWA} from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
 
+/*
+#==============================================
+Parameters
+#==============================================
+*/
 
-//parameters
 params.ref = " "
 params.index = " "
 params.reads = " "
 params.outdir = " "
-params.fasta = " "
+params.contigs = " "
+
+/*
+#==============================================
+Channels
+#==============================================
+*/
 
 Channel.fromPath(params.ref, checkIfExists:true)
        .set{refFasta}
-     //.view()
+       //.view()
 
 Channel.fromFilePairs(params.reads, checkIfExists: true)
        .map{it}
        .set{reads}
 
-
-// workflows
-
-workflow shovill {
-    
-       main:
-       RAWFASTQC(reads)
-       FASTP(reads)
-       CLEANFASTQC(FASTP.out.reads)
-       MULTIQC(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
-       ASSEMBLY(FASTP.out.reads)
-       QUAST(ASSEMBLY.out)
-}
+//Channel.fromPath(params.contigs, checkIfExists:true)
+       //.set{assembly}
+       //.view()
 
 //return
 
-workflow mapper {
-       FASTP(reads)
-       INDEXREFERENCE(refFasta)
-       BWA(reads, refFasta)
+/*
+#==============================================
+Workflows
+#==============================================
+*/
 
+workflow shovill {
+    
+    main:
+    RAWFASTQC(reads)
+    FASTP(reads)
+    CLEANFASTQC(FASTP.out.reads)
+    MULTIQC(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+    ASSEMBLY(FASTP.out.reads)
+    QUAST(ASSEMBLY.out)
 }
 
 //return
@@ -73,27 +86,31 @@ workflow mapper {
 workflow snippy_fastq {
     
     main:
-        FASTP(reads)
-        SNIPPYFASTQ(FASTP.out.reads, refFasta)
-    emit:
-        SNIPPYFASTQ.out // results
+    //FASTP(reads)
+    //SNIPPYFASTQ(FASTP.out.reads, refFasta)
+    SNIPPYFASTQ1(reads, refFasta)
+    //emit:
+    //SNIPPYFASTQ1.out // results
 }       
 
 workflow snippy_fasta {
     
     main:
-        FASTP(reads)
-        ASSEMBLY (FASTP.out.reads)
-        SNIPPYFASTA(ASSEMBLY.out, refFasta)
+    FASTP(reads)
+    ASSEMBLY (FASTP.out.reads)
+    SNIPPYFASTA(ASSEMBLY.out, refFasta)
     emit:
-        SNIPPYFASTA.out // results
+    SNIPPYFASTA.out // results
 }  
 
 //return
 
 workflow  snippy_core {
-        FASTP(reads)
-        SNIPPYFASTQ(FASTP.out.reads, refFasta)
-        SNIPPYCORE(SNIPPYFASTQ.out.collect(), refFasta)        
+    FASTP(reads)
+    SNIPPYFASTQ(FASTP.out.reads, refFasta)
+    SNIPPYCORE(SNIPPYFASTQ.out.collect(), refFasta)        
 }
 
+workflow qc_contigs {
+    QUAST(assembly)
+}
