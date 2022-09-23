@@ -14,10 +14,10 @@ QC
  - Quast v.5.0.2
 
 Mapping and Variant calling
- - snippy v.4.6
+ - Snippy v.4.6
  
 Assembly
- - shovill v.1.1.0 (spades and pilon) 
+ - Shovill v.1.1.0 (spades and pilon) 
 
 ## Installation
 Requires a local installation of 
@@ -33,7 +33,7 @@ Install Miniconda locally first,
 wget https://repo.anaconda.com/miniconda/Miniconda3-py37_4.12.0-Linux-x86_64.sh
 bash Miniconda3-py37_4.12.0-Linux-x86_64.sh
 ```
-then create the bug-flow_DSL2 conda environment with all the software needed in the pipeline.
+then create the bug-flow_DSL2 conda environment with all the software needed for running the pipeline.
 ```
 conda create -n bug-flow_DSL2 -c bioconda fastqc fastp multiqc shovill quast snippy
 conda activate bug-flow_DSL2
