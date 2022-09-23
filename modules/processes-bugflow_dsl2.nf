@@ -57,7 +57,7 @@ process FASTP {
     tuple val(uuid), path(reads) 
     
     output:
-    tuple val(uuid), path("${uuid}_clean_R*.fastq.gz"), emit: reads
+    tuple val(uuid), path("${uuid}_clean_R*.fastq.gz"), emit: clean_reads
     path("${uuid}.fastp.json"), emit: json
  
     script:
@@ -108,14 +108,13 @@ process MULTIQC {
 	
 	//conda '/home/ubuntu/miniconda3/envs/multiqc_env'
 
-	tag {"MultiQC raw and clean FastQC files"}
+	tag {"Collate and summarize QC files"}
 
 	publishDir "$params.outdir/multiqc/", mode: "symlink"
 
 	input:
-    path ('*/*_fastqc/*')
+    path ('*')
     
-
     output:
     file "*multiqc_report.html"
     file "*_data"
@@ -123,7 +122,7 @@ process MULTIQC {
     script:
 
     """
-    multiqc . -m fastqc
+    multiqc . 
     """
 }
 
@@ -195,7 +194,7 @@ process SNIPPYFASTQ {
 	publishDir "$params.outdir/snps/", mode: "symlink"
 
     input:
-    tuple val(uuid), path(reads)
+    tuple val(uuid), path(clean_reads)
     path(refFasta)
 
     output:
@@ -292,9 +291,9 @@ process SNIPPYCORE {
     path(refFasta)
 
     output:
-    path("wgs.core.fasta")
-    path("snp.core.fasta")
-    path("snp.core.vcf")
+    //path("wgs.core.fasta")
+    //path("snp.core.fasta")
+    //path("snp.core.vcf")
 
     """
     snippy-core --ref ${refFasta} --prefix core *_snippy
