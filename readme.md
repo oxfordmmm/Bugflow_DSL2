@@ -24,9 +24,12 @@ Requires a local installation of
 * Docker - https://www.docker.com/get-started
 * Java version 8 or later (required for nextflow)
 * Nextflow - https://www.nextflow.io
+* Miniconda - Miniconda3-py37_4.12.0-Linux-x86_64.sh
 
 Tools from bug-flow DSL2 are available from Bioconda
 ```
+wget https://repo.anaconda.com/miniconda/Miniconda3-py37_4.12.0-Linux-x86_64.sh
+bash Miniconda3-py37_4.12.0-Linux-x86_64.sh
 conda create -n bug-flow_DSL2 -c bioconda fastqc fastp multiqc shovill quast snippy
 conda activate bug-flow_DSL2
 ```
