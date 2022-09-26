@@ -31,7 +31,7 @@ include { QUAST } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
-
+include { AMR_PLM } from './modules/processes-bugflow_dsl2.nf'
 /*
 #==============================================
 Parameters
@@ -97,6 +97,15 @@ workflow qc_contigs {
     MULTIQC(QUAST.out.collect())
 }
 
+workflow amr_abricate {
+    Channel.fromPath(params.contigs, checkIfExists:true)
+           //.view()
+           .set{assembly}
+    main:
+    AMR_PLM(assembly)
+    
+}
+
 workflow snippy_fastq {
     Channel.fromFilePairs(params.reads, checkIfExists: true)
            .map{it}
@@ -110,7 +119,6 @@ workflow snippy_fastq {
     main:
     FASTP(reads)
     SNIPPYFASTQ(FASTP.out.reads, refFasta)
-    //SNIPPYFASTQ(reads.collect(), refFasta)
     //emit:
     //SNIPPYFASTQ.out // results
 }       
