@@ -57,7 +57,7 @@ process FASTP {
     tuple val(uuid), path(reads) 
     
     output:
-    tuple val(uuid), path("${uuid}_clean_R*.fastq.gz"), emit: clean_reads
+    tuple val(uuid), path("${uuid}_clean_R*.fastq.gz"), emit: reads
     path("${uuid}.fastp.json"), emit: json
  
     script:
@@ -180,6 +180,44 @@ process QUAST  {
 
 /*
 #===============================================
+AMRG and Plasmid Type Profiling
+#===============================================
+*/
+
+process AMR_PLM {
+    
+    tag { "AMR finding with Abricate" }
+    
+    publishDir "$params.outdir/abricate/", mode: 'symlink'
+    
+    input:
+    path(assembly)  
+    
+    
+    output:
+    path("${assembly}_card.tab")
+    path("${assembly}_resfinder.tab")
+    path("${assembly}_plasmidfinder.tab")
+    path("${assembly}_card_summary.tsv")
+    path("${assembly}_resfinder_summary.tsv")
+    path("${assembly}_plasmidfinder_summary.tsv")
+
+    script:
+    """
+    abricate  --db card ${assembly} > ${assembly}_card.tab
+    abricate --summary ${assembly}_card.tab > ${assembly}_card_summary.tsv
+    abricate  --db resfinder ${assembly} > ${assembly}_resfinder.tab
+    abricate --summary ${assembly}_resfinder.tab > ${assembly}_resfinder_summary.tsv
+    abricate  --db plasmidfinder ${assembly} > ${assembly}_plasmidfinder.tab
+    abricate --summary ${assembly}_plasmidfinder.tab > ${assembly}_plasmidfinder_summary.tsv
+    """
+}
+
+
+
+
+/*
+#===============================================
 Read mapping and SNP calling from Illumina reads
 #===============================================
 */
@@ -194,7 +232,7 @@ process SNIPPYFASTQ {
 	publishDir "$params.outdir/snps/", mode: "symlink"
 
     input:
-    tuple val(uuid), path(clean_reads)
+    tuple val(uuid), path(reads)
     path(refFasta)
 
     output:
