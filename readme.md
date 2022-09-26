@@ -19,6 +19,9 @@ Mapping and Variant calling
 Assembly
  - Shovill v.1.1.0 (spades and pilon) 
 
+AMRG Annotation
+ - Abricate v.0.8
+
 ## Installation
 Requires a local installation of 
 * Docker - https://www.docker.com/get-started
