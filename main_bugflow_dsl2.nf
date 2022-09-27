@@ -82,8 +82,7 @@ workflow shovill {
     CLEANFASTQC(FASTP.out.reads)
     MULTIQC(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
     ASSEMBLY(FASTP.out.reads)
-    QUAST(ASSEMBLY.out)
-    MULTIQC(QUAST.out.collect())
+    //QUAST(ASSEMBLY.out)
 }
 
 //return
@@ -118,9 +117,8 @@ workflow snippy_fastq {
     
     main:
     FASTP(reads)
-    SNIPPYFASTQ(FASTP.out.reads, refFasta)
-    //emit:
-    //SNIPPYFASTQ.out // results
+    SNIPPYFASTQ(FASTP.out.reads.combine(refFasta))
+    //SNIPPYCORE(SNIPPYFASTQ.out.combine(refFasta)) 
 }       
 
 workflow snippy_fasta {
@@ -133,7 +131,7 @@ workflow snippy_fasta {
            .set{refFasta}
 
     main:
-    SNIPPYFASTA(assembly, refFasta)
+    SNIPPYFASTA(assembly.combine(refFasta))
     
     emit:
     SNIPPYFASTA.out // results
@@ -145,7 +143,7 @@ workflow snippy_fasta {
 workflow  snippy_core {
     FASTP(reads)
     SNIPPYFASTQ(FASTP.out.reads, refFasta)
-    SNIPPYCORE(SNIPPYFASTQ.out.collect(), refFasta)        
+    SNIPPYCORE(SNIPPYFASTQ.out.combine(refFasta))        
 }
 
 
