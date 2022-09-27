@@ -17,8 +17,9 @@ QC of raw reads
 process RAWFASTQC {
 	cpus 4
 
-	//conda '/home/ubuntu/miniconda3/envs/fastqc_env'
-	tag {"FastQC raw ${uuid} reads"}
+    conda './conda/fastqc.yaml'
+	
+    tag {"FastQC raw ${uuid} reads"}
 	
 	publishDir "$params.outdir/raw_fastqc", mode: 'symlink'
 
@@ -46,8 +47,7 @@ Read cleaning with Fastp
 process FASTP {
 	cpus 8
 
-    //conda './fastp_env.yaml'
-    //conda '/home/ubuntu/miniconda3/envs/fastp_env'
+    conda './conda/fastp.yaml'
     
 
     tag {"filter $uuid reads"}
@@ -78,8 +78,8 @@ QC clean reads
 process CLEANFASTQC {
 	cpus 4
 	
-	//conda '/home/ubuntu/miniconda3/envs/fastqc_env'
-
+    conda './conda/fastqc.yaml'
+	
 	tag {"FastQC clean ${uuid} reads"}
 
 	input:
@@ -106,7 +106,7 @@ Collate and summarize all read QC files
 
 process MULTIQC {
 	
-	//conda '/home/ubuntu/miniconda3/envs/multiqc_env'
+	conda './bin/multiqc.yaml'
 
 	tag {"Collate and summarize QC files"}
 
@@ -137,8 +137,7 @@ process ASSEMBLY {
 
 	tag { "assemble ${uuid}" }
 
-	//conda './shovill_env.yaml'
-  	//conda '/home/ubuntu/miniconda3/envs/shovill_env'
+	conda './conda/shovill.yaml'
   
   	publishDir "$params.outdir/assemblies/", mode: "symlink"
 
@@ -162,7 +161,10 @@ QC assembled genomes
 */
 
 process QUAST  {
-	tag { " QC assembly using Quast" }
+    
+    tag { " QC assembly using Quast" }
+
+    conda './conda/quast.yaml'
     
     publishDir "$params.outdir/quast", mode: 'symlink'
     
@@ -188,6 +190,8 @@ process AMR_PLM {
     
     tag { "AMR finding with Abricate" }
     
+    conda './conda/abricate.yaml'
+
     publishDir "$params.outdir/abricate/", mode: 'symlink'
     
     input:
@@ -227,13 +231,13 @@ process SNIPPYFASTQ {
 
 	tag { "call snps from FQs: ${uuid}" }
 
-	//conda '/home/ubuntu/miniconda3/envs/snippy_env'
+	conda './conda/snippy.yaml'
 	    
 	publishDir "$params.outdir/snps/", mode: "symlink"
 
     input:
-    tuple val(uuid), path(reads)
-    path(refFasta)
+    tuple val(uuid), path(reads), path(refFasta)
+    //path(refFasta)
 
     output:
 	path("${uuid}_snippy/*") // whole output folder
@@ -244,45 +248,6 @@ process SNIPPYFASTQ {
 
 }
 
-
-process SNIPPYFASTQ1 {
-	cpus 4
-
-	tag { "call snps from FQs: ${uuid}" }
-
-	//conda '/home/ubuntu/miniconda3/envs/snippy_env'
-	    
-	publishDir "$params.outdir/snps/", mode: "symlink"
-
-    input:
-    tuple val(uuid), path(reads)
-    path(refFasta)
-
-    output:
-	tuple val(uuid), path("${uuid}_snippy/${uuid}.tab")              , emit: tab
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.csv")              , emit: csv
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.html")             , emit: html
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.vcf")              , emit: vcf
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.bed")              , emit: bed
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.gff")              , emit: gff
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.bam")              , emit: bam
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.bam.bai")          , emit: bai
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.log")              , emit: log
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.aligned.fa")       , emit: aligned_fa
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.consensus.fa")     , emit: consensus_fa
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.consensus.subs.fa"), emit: consensus_subs_fa
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.raw.vcf")          , emit: raw_snps_vcf
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.filt.vcf")         , emit: filt_snps_vcf
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.vcf.gz")           , emit: vcf_gz
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.vcf.gz.csi")       , emit: vcf_csi
-    tuple val(uuid), path("${uuid}_snippy/${uuid}.txt")              , emit: txt
-    
-
-    """
-    snippy --cpus $task.cpus --outdir ${uuid}_snippy --prefix ${uuid} --reference ${refFasta} --R1 ${reads[0]} --R2 ${reads[1]} 
-    """
-
-}
 
 /*
 #==================================================
@@ -295,7 +260,7 @@ process SNIPPYFASTA {
 
 	tag { "call snps from contigs: ${uuid}" }
 
-	//conda '/home/ubuntu/miniconda3/envs/snippy_env'
+	conda './conda/snippy.yaml'
         
 	publishDir "$params.outdir/snps/", mode: "symlink"
 
@@ -320,18 +285,20 @@ SNP alignment
 process SNIPPYCORE {
     tag { "create snp alignments: SnippyCore" }
 
+    conda './conda/snippy.yaml'
+
     publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.vcf"
     publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.fasta"
     publishDir "${params.outdir}/snippy_core", mode: "symlink", pattern: "wgs.core.fasta"
 
     input:
-    path(*_snippy)  // collected list of snippy output directories
-    path(refFasta)
+    path("*"), path(refFasta)  // collected list of snippy output directories + ref genome
+    
 
     output:
-    //path("wgs.core.fasta")
-    //path("snp.core.fasta")
-    //path("snp.core.vcf")
+    path("wgs.core.fasta")
+    path("snp.core.fasta")
+    path("snp.core.vcf")
 
     """
     snippy-core --ref ${refFasta} --prefix core *_snippy
