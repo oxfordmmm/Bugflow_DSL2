@@ -104,5 +104,8 @@ Alternatively to resume a partially completed run where the intermediate files h
 nextflow run main_bugflow_dsl2.nf -entry shovill --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output" -resume
 ```
 
-
-
+---
+Arun Decano & David Eyre
+arun_decano@ndm.ox.ac.uk
+david.eyre@bdi.ox.ac.uk   
+September 2022
