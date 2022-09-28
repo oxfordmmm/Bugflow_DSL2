@@ -25,13 +25,14 @@ Modules
 #==============================================
 */
 
-include { RAWFASTQC; FASTP; CLEANFASTQC; MULTIQC  } from './modules/processes-bugflow_dsl2.nf'
+include { RAWFASTQC; FASTP; CLEANFASTQC; MULTIQC_READS; MULTIQC_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
 include { ASSEMBLY } from './modules/processes-bugflow_dsl2.nf'
-include { QUAST } from './modules/processes-bugflow_dsl2.nf'
+include { QUAST_FROM_READS; QUAST_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
-include { AMR_PLM } from './modules/processes-bugflow_dsl2.nf'
+include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
+include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS } from './modules/processes-bugflow_dsl2.nf'
 /*
 #==============================================
 Parameters
@@ -42,6 +43,7 @@ params.ref = " "
 params.reads = " "
 params.outdir = " "
 params.contigs = " "
+params.mlstdb = " "
 
 /*
 #==============================================
@@ -80,9 +82,10 @@ workflow shovill {
     RAWFASTQC(reads)
     FASTP(reads)
     CLEANFASTQC(FASTP.out.reads)
-    MULTIQC(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+    MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
     ASSEMBLY(FASTP.out.reads)
-    //QUAST(ASSEMBLY.out)
+    QUAST(ASSEMBLY.out.collect())
+    MULTIQC_CONTIGS(QUAST.out.collect())
 }
 
 //return
@@ -96,12 +99,24 @@ workflow qc_contigs {
     MULTIQC(QUAST.out.collect())
 }
 
-workflow amr_abricate {
+workflow mlst_amr_plm_reads {
     Channel.fromPath(params.contigs, checkIfExists:true)
            //.view()
            .set{assembly}
     main:
-    AMR_PLM(assembly)
+    FASTP(reads)
+    ASSEMBLY(FASTP.out.reads)
+    MLST_FROM_READS(ASSEMBLY.out.assembly)
+    AMR_PLM_FROM_READS(ASSEMBLY.assembly)
+}
+
+workflow mlst_amr_plm_contigs {
+    Channel.fromPath(params.contigs, checkIfExists:true)
+           //.view()
+           .set{assembly}
+    main:
+    MLST_FROM_CONTIGS(assembly)
+    AMR_PLM_FROM_CONTIGS(assembly)
     
 }
 
@@ -167,3 +182,20 @@ workflow cdiff_mapping_snpCalling {
      
 }
 
+
+workflow cdiff_asssembly_mlst_amr_plm {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       main:
+       RAWFASTQC(reads)
+       FASTP(reads)
+       CLEANFASTQC(FASTP.out.reads)
+       MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+       ASSEMBLY(FASTP.out.reads)
+       QUAST_FROM_READS(ASSEMBLY.out.assembly)
+       MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       MLST_CDIFF_FROM_READS(ASSEMBLY.out.assembly)
+       AMR_PLM_FROM_READS(ASSEMBLY.out.assembly)
+}
