@@ -104,13 +104,13 @@ Collate and summarize all read QC files
 #==============================================
 */
 
-process MULTIQC {
+process MULTIQC_READS {
 	
-	conda './bin/multiqc.yaml'
+	conda './conda/multiqc.yaml'
 
 	tag {"Collate and summarize QC files"}
 
-	publishDir "$params.outdir/multiqc/", mode: "symlink"
+	publishDir "$params.outdir/multiqc_reads/", mode: "symlink"
 
 	input:
     path ('*')
@@ -160,7 +160,27 @@ QC assembled genomes
 #==============================================
 */
 
-process QUAST  {
+process QUAST_FROM_READS  {
+    
+    tag { " QC assembly using Quast" }
+
+    conda './conda/quast.yaml'
+    
+    publishDir "$params.outdir/quast", mode: 'symlink'
+    
+    input:
+    tuple val(uuid), path(assembly)  
+    
+    output:
+    path("quast_${uuid}")
+
+    script:
+    """
+    quast.py  ${assembly} -o quast_${uuid}
+    """
+}
+
+process QUAST_FROM_CONTIGS  {
     
     tag { " QC assembly using Quast" }
 
@@ -180,22 +200,75 @@ process QUAST  {
     """
 }
 
+process MULTIQC_CONTIGS {
+	
+	conda './conda/multiqc.yaml'
+
+	tag {"Collate and summarize QC files"}
+
+	publishDir "$params.outdir/multiqc_contigs/", mode: "symlink"
+
+	input:
+    path ('*')
+    
+    output:
+    file "*multiqc_report.html"
+    file "*_data"
+
+    script:
+
+    """
+    multiqc . 
+    """
+}
+
+
 /*
 #===============================================
 AMRG and Plasmid Type Profiling
 #===============================================
 */
 
-process AMR_PLM {
+process AMR_PLM_FROM_READS {
     
     tag { "AMR finding with Abricate" }
     
     conda './conda/abricate.yaml'
 
-    publishDir "$params.outdir/abricate/", mode: 'symlink'
+    publishDir "$params.outdir/amr_plasmid/", mode: 'symlink'
     
     input:
-    path(assembly)  
+    tuple val(uuid), path(assembly)  
+    
+    
+    output:
+    path("${uuid}_card.tab")
+    path("${uuid}_resfinder.tab")
+    path("${uuid}_plasmidfinder.tab")
+    path("${uuid}_card_summary.tsv")
+    path("${uuid}_resfinder_summary.tsv")
+    path("${uuid}_plasmidfinder_summary.tsv")
+
+    script:
+    """
+    abricate  --db card ${assembly} > ${uuid}_card.tab
+    abricate --summary ${uuid}_card.tab > ${uuid}_card_summary.tsv
+    abricate  --db resfinder ${assembly} > ${uuid}_resfinder.tab
+    abricate --summary ${uuid}_resfinder.tab > ${uuid}_resfinder_summary.tsv
+    abricate  --db plasmidfinder ${assembly} > ${uuid}_plasmidfinder.tab
+    abricate --summary ${uuid}_plasmidfinder.tab > ${uuid}_plasmidfinder_summary.tsv
+    """
+}
+process AMR_PLM_FROM_CONTIGS {
+    
+    tag { "AMR finding with Abricate" }
+    
+    conda './conda/abricate.yaml'
+
+    publishDir "$params.outdir/amr_plasmid/", mode: 'symlink'
+    
+    input:
+    tuple val(uuid), path(assembly)  
     
     
     output:
@@ -217,8 +290,77 @@ process AMR_PLM {
     """
 }
 
+/*
+#===============================================
+Determine MLST
+#===============================================
+*/
 
+process MLST_FROM_READS {
+    cpus 4
 
+    tag {"MLST: ${uuid}"}
+
+    conda 'conda/mlst.yaml'
+
+    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    
+    input:
+    tuple val(uuid), path(assembly)  
+    
+    
+    output:
+    path("${uuid}_ST.tsv")
+
+    """
+    mlst --scheme $params.mlstdb ${assembly} > ${uuid}_ST.tsv
+    """
+
+}
+
+process MLST_CDIFF_FROM_READS {
+    cpus 4
+
+    tag {"MLST: ${assembly}"}
+
+    conda 'conda/mlst.yaml'
+
+    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    
+    input:
+    tuple val(uuid), path(assembly)  
+    
+    
+    output:
+    path("${uuid}_ST.tsv")
+
+    """
+    mlst --scheme cdifficile ${assembly} > ${uuid}_ST.tsv
+    """
+
+}
+
+process MLST_FROM_CONTIGS {
+    cpus 4
+
+    tag {"MLST: ${assembly}"}
+
+    conda 'conda/mlst.yaml'
+
+    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    
+    input:
+    path(assembly)  
+    
+    
+    output:
+    path("${assembly}_ST.tsv")
+
+    """
+    mlst --scheme $params.mlstdb ${assembly} > ${assembly}_ST.tsv
+    """
+
+}
 
 /*
 #===============================================
@@ -389,7 +531,7 @@ process BWA {
     
 	"""
     bwa mem -r 1.5 -O 6 -t ${task.cpus} ref_index ${uuid}_clean.1.fq.gz ${uuid}_clean.2.fq.gz | samtools view -uS - | samtools sort -
-	> bwa_mapped
+	> ${uuid}.aligned.bam
     """
 }
 
