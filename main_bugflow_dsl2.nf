@@ -146,4 +146,24 @@ workflow  snippy_core {
     SNIPPYCORE(SNIPPYFASTQ.out.combine(refFasta))        
 }
 
+workflow cdiff_mapping_snpCalling {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       Channel.fromPath(params.ref, checkIfExists:true)
+           //.view()       
+           .set{refFasta}
+     main:
+     INDEXREFERENCE(refFasta)     
+     REFMASK(refFasta)
+     FASTP(reads)
+     BWA(FASTP.out.reads, refFasta)
+     REMOVE_DUPLICATES(BWA.out)
+     MPILEUP(REMOVE_DUPLICATES.out.dup_removed)
+     SNP_CALL(MPILEUP.out.pileup)
+     FILTER_SNPS(SNP_CALL.out.snps_called)
+     CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
+     
+}
 
