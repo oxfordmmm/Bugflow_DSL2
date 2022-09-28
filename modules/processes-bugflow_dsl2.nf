@@ -310,5 +310,82 @@ process SNIPPYCORE {
 
 }
 
+/*
+#==============================================
+Index Reference Genome
+#==============================================
+*/
+
+process INDEXREFERENCE {
+    tag {"index reference FASTA"}
+    
+	input:
+  	path (refFasta)
+	
+	output:
+	publishDir "$params.outdir"
+	path ("*"), emit: ref_index
+
+	script:
+	"""
+	#bwa index
+	bwa index ${refFasta} > ${refFasta}_bwa.fai
+
+	#samtools index
+	samtools faidx ${refFasta} > ${refFasta}_samtools.fai
+
+	#blast indexes for self-self blast
+	makeblastdb -dbtype nucl -in $refFasta
+
+	#reference mask
+    #genRefMask.py -r $refFasta -m 200 -p 95
+    #bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}.rpt_mask.gz
+	#echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
+	#tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
 
 
+    """
+}
+
+/*
+#==============================================
+Mask Reference Genome
+#==============================================
+*/
+ 
+process REFMASK {
+	input:
+	path (refFasta)	
+
+	output:
+	path(${refFasta}.baseName.rpt_mask.gz), emit: refFasta.baseName
+
+	script:
+	"""
+    genRefMask.py -r $refFasta -m 200 -p 95
+    bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}
+	echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
+	tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
+    """
+}
+
+/*
+#==============================================
+Map reads to Reference genome using BWA
+#==============================================
+*/
+
+process BWA {
+	cpus 8
+	tag { "map clean ${uuid} reads to reference" }
+    
+	input:
+	tuple val(uuid), path(reads), path(ref_index)
+
+    output:
+    tuple val(uuid), path("${uuid}.aligned.bam"), emit: bwa_mapped
+    
+	//don't add read group header here results in poorly formatted header
+    
+	"""
+    bwa mem -r 1.5 -O 6 -t ${
