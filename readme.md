@@ -106,6 +106,8 @@ nextflow run main_bugflow_dsl2.nf -entry shovill --reads "./example_data/*{1,2}.
 
 ---
 Arun Decano & David Eyre
+
 arun_decano@ndm.ox.ac.uk
-david.eyre@bdi.ox.ac.uk   
+david.eyre@bdi.ox.ac.uk 
+
 September 2022
