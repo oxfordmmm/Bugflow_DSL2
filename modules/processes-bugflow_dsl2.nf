@@ -17,7 +17,7 @@ QC of raw reads
 process RAWFASTQC {
 	cpus 4
 
-    conda './conda/fastqc.yaml'
+    conda "${projectDir}/conda/fastqc.yaml"
 	
     tag {"FastQC raw ${uuid} reads"}
 	
@@ -47,7 +47,7 @@ Read cleaning with Fastp
 process FASTP {
 	cpus 8
 
-    conda './conda/fastp.yaml'
+    conda "${projectDir}/conda/fastp.yaml"
     
 
     tag {"filter $uuid reads"}
@@ -78,7 +78,7 @@ QC clean reads
 process CLEANFASTQC {
 	cpus 4
 	
-    conda './conda/fastqc.yaml'
+    conda "${projectDir}/conda/fastqc.yaml"
 	
 	tag {"FastQC clean ${uuid} reads"}
 
@@ -106,7 +106,7 @@ Collate and summarize all read QC files
 
 process MULTIQC_READS {
 	
-	conda './conda/multiqc.yaml'
+	conda "${projectDir}/conda/multiqc.yaml"
 
 	tag {"Collate and summarize QC files"}
 
@@ -137,7 +137,7 @@ process ASSEMBLY {
 
 	tag { "assemble ${uuid}" }
 
-	conda './conda/shovill.yaml'
+	conda "${projectDir}/conda/shovill.yaml"
   
   	publishDir "$params.outdir/assemblies/", mode: "symlink"
 
@@ -164,7 +164,7 @@ process QUAST_FROM_READS  {
     
     tag { " QC assembly using Quast" }
 
-    conda './conda/quast.yaml'
+    conda "${projectDir}/conda/quast.yaml"
     
     publishDir "$params.outdir/quast", mode: 'symlink'
     
@@ -184,7 +184,7 @@ process QUAST_FROM_CONTIGS  {
     
     tag { " QC assembly using Quast" }
 
-    conda './conda/quast.yaml'
+    conda "${projectDir}/conda/quast.yaml"
     
     publishDir "$params.outdir/quast", mode: 'symlink'
     
@@ -202,7 +202,7 @@ process QUAST_FROM_CONTIGS  {
 
 process MULTIQC_CONTIGS {
 	
-	conda './conda/multiqc.yaml'
+	conda "${projectDir}/conda/multiqc.yaml"
 
 	tag {"Collate and summarize QC files"}
 
@@ -233,7 +233,7 @@ process AMR_PLM_FROM_READS {
     
     tag { "AMR finding with Abricate" }
     
-    conda './conda/abricate.yaml'
+    conda "${projectDir}/conda/abricate.yaml"
 
     publishDir "$params.outdir/amr_plasmid/", mode: 'symlink'
     
@@ -263,7 +263,7 @@ process AMR_PLM_FROM_CONTIGS {
     
     tag { "AMR finding with Abricate" }
     
-    conda './conda/abricate.yaml'
+    conda "${projectDir}/conda/abricate.yaml"
 
     publishDir "$params.outdir/amr_plasmid/", mode: 'symlink'
     
@@ -301,7 +301,7 @@ process MLST_FROM_READS {
 
     tag {"MLST: ${uuid}"}
 
-    conda 'conda/mlst.yaml'
+    conda "${projectDir}/conda/mlst.yaml"
 
     publishDir "$params.outdir/mlst/", mode: 'symlink'
     
@@ -323,7 +323,7 @@ process MLST_CDIFF_FROM_READS {
 
     tag {"MLST: ${assembly}"}
 
-    conda 'conda/mlst.yaml'
+    conda "${projectDir}/conda/mlst.yaml"
 
     publishDir "$params.outdir/mlst/", mode: 'symlink'
     
@@ -345,7 +345,7 @@ process MLST_FROM_CONTIGS {
 
     tag {"MLST: ${assembly}"}
 
-    conda 'conda/mlst.yaml'
+    conda "${projectDir}/conda/mlst.yaml"
 
     publishDir "$params.outdir/mlst/", mode: 'symlink'
     
@@ -373,7 +373,7 @@ process SNIPPYFASTQ {
 
 	tag { "call snps from FQs: ${uuid}" }
 
-	conda './conda/snippy.yaml'
+	conda "${projectDir}/conda/snippy.yaml"
 	    
 	publishDir "$params.outdir/snps/", mode: "symlink"
 
@@ -402,7 +402,7 @@ process SNIPPYFASTA {
 
 	tag { "call snps from contigs: ${uuid}" }
 
-	conda './conda/snippy.yaml'
+	conda "${projectDir}/conda/snippy.yaml"
         
 	publishDir "$params.outdir/snps/", mode: "symlink"
 
@@ -427,7 +427,7 @@ SNP alignment
 process SNIPPYCORE {
     tag { "create snp alignments: SnippyCore" }
 
-    conda './conda/snippy.yaml'
+    conda "${projectDir}/conda/snippy.yaml"
 
     publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.vcf"
     publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.fasta"

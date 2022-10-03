@@ -1,7 +1,6 @@
-name: multiqc_env
+name: shovill_env
 channels:
   - bioconda
   - defaults
 dependencies:
-  - pip:
-    - multiqc
+  - shovill
