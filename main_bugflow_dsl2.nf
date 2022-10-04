@@ -16,7 +16,12 @@ Assembly
  - Shovill (spades) 
 */
 
-// enable DSL2
+/*
+#==============================================
+Enable DSL2
+#==============================================
+*/
+
 nextflow.enable.dsl = 2
 
 /*
@@ -33,7 +38,7 @@ include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
 include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
 include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS } from './modules/processes-bugflow_dsl2.nf'
-include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CAL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
+include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
 
 /*
 #==============================================
@@ -135,7 +140,7 @@ workflow snippy_fastq {
     main:
     FASTP(reads)
     SNIPPYFASTQ(FASTP.out.reads.combine(refFasta))
-    //SNIPPYCORE(SNIPPYFASTQ.out.combine(refFasta)) 
+    SNIPPYCORE(SNIPPYFASTQ.out,refFasta) 
 }       
 
 workflow snippy_fasta {
@@ -163,24 +168,24 @@ workflow  snippy_core {
     SNIPPYCORE(SNIPPYFASTQ.out.combine(refFasta))        
 }
 
-workflow cdiff_mapping_snpCalling {
-       Channel.fromFilePairs(params.reads, checkIfExists: true)
-           .map{it}
+workflow cdiff_mapping_snpCalling_DE {
+       //Channel.fromFilePairs(params.reads, checkIfExists: true)
+           //.map{it}
            //.view()
-           .set{reads}
+           //.set{reads}
        Channel.fromPath(params.ref, checkIfExists:true)
            //.view()       
            .set{refFasta}
-     main:
-     INDEXREFERENCE(refFasta)     
-     REFMASK(refFasta)
-     FASTP(reads)
-     BWA(FASTP.out.reads, refFasta)
-     REMOVE_DUPLICATES(BWA.out)
-     MPILEUP(REMOVE_DUPLICATES.out.dup_removed)
-     SNP_CALL(MPILEUP.out.pileup)
-     FILTER_SNPS(SNP_CALL.out.snps_called)
-     CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
+       main:
+       INDEXREFERENCE(refFasta)     
+       //REFMASK(refFasta)
+       //FASTP(reads)
+       //BWA(FASTP.out.reads, REFMASK.out)
+       //REMOVE_DUPLICATES(BWA.out)
+       //MPILEUP(REMOVE_DUPLICATES.out.dup_removed, refFasta)
+       //SNP_CALL(MPILEUP.out.pileup, refFasta)
+       //FILTER_SNPS(SNP_CALL.out.snps_called)
+       //CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
      
 }
 
@@ -190,6 +195,9 @@ workflow cdiff_asssembly_mlst_amr_plm {
            .map{it}
            //.view()
            .set{reads}
+       Channel.fromPath(params.ref, checkIfExists:true)
+           //.view()       
+           .set{refFasta}
        main:
        RAWFASTQC(reads)
        FASTP(reads)
