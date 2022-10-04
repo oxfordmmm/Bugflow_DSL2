@@ -17,11 +17,10 @@ QC of raw reads
 process RAWFASTQC {
 	cpus 4
 
-    conda "${projectDir}/conda/fastqc.yaml"
-	
+    label 'non_perl'
     tag {"FastQC raw ${uuid} reads"}
 	
-	publishDir "$params.outdir/raw_fastqc", mode: 'symlink'
+	publishDir "$params.outdir/raw_fastqc", mode: 'copy'
 
 	input:
     tuple val(uuid), path(reads) 
@@ -45,13 +44,11 @@ Read cleaning with Fastp
 */
 
 process FASTP {
-	cpus 8
+	cpus 8    
 
-    conda "${projectDir}/conda/fastp.yaml"
-    
-
+    label 'non_perl'
     tag {"filter $uuid reads"}
-    publishDir "$params.outdir/clean_fastqs/", mode: "symlink"
+    publishDir "$params.outdir/clean_fastqs/", mode: "copy"
 
     input:
     tuple val(uuid), path(reads) 
@@ -78,8 +75,7 @@ QC clean reads
 process CLEANFASTQC {
 	cpus 4
 	
-    conda "${projectDir}/conda/fastqc.yaml"
-	
+    label 'perl'
 	tag {"FastQC clean ${uuid} reads"}
 
 	input:
@@ -105,12 +101,11 @@ Collate and summarize all read QC files
 */
 
 process MULTIQC_READS {
-	
-	conda "${projectDir}/conda/multiqc.yaml"
 
+    label 'non_perl'
 	tag {"Collate and summarize QC files"}
 
-	publishDir "$params.outdir/multiqc_reads/", mode: "symlink"
+	publishDir "$params.outdir/multiqc_reads/", mode: "copy"
 
 	input:
     path ('*')
@@ -136,10 +131,9 @@ process ASSEMBLY {
   	cpus 8
 
 	tag { "assemble ${uuid}" }
+    label 'perl'
 
-	conda "${projectDir}/conda/shovill.yaml"
-  
-  	publishDir "$params.outdir/assemblies/", mode: "symlink"
+  	publishDir "$params.outdir/assemblies/", mode: "copy"
 
   	input:
   	tuple val(uuid), path(reads)
@@ -163,10 +157,9 @@ QC assembled genomes
 process QUAST_FROM_READS  {
     
     tag { " QC assembly using Quast" }
-
-    conda "${projectDir}/conda/quast.yaml"
     
-    publishDir "$params.outdir/quast", mode: 'symlink'
+    label 'perl'
+    publishDir "$params.outdir/quast", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -184,9 +177,8 @@ process QUAST_FROM_CONTIGS  {
     
     tag { " QC assembly using Quast" }
 
-    conda "${projectDir}/conda/quast.yaml"
-    
-    publishDir "$params.outdir/quast", mode: 'symlink'
+    label 'perl'
+    publishDir "$params.outdir/quast", mode: 'copy'
     
     input:
     path(assembly)  
@@ -206,7 +198,7 @@ process MULTIQC_CONTIGS {
 
 	tag {"Collate and summarize QC files"}
 
-	publishDir "$params.outdir/multiqc_contigs/", mode: "symlink"
+	publishDir "$params.outdir/multiqc_contigs/", mode: "copy"
 
 	input:
     path ('*')
@@ -232,10 +224,10 @@ AMRG and Plasmid Type Profiling
 process AMR_PLM_FROM_READS {
     
     tag { "AMR finding with Abricate" }
-    
-    conda "${projectDir}/conda/abricate.yaml"
 
-    publishDir "$params.outdir/amr_plasmid/", mode: 'symlink'
+    label 'perl'
+
+    publishDir "$params.outdir/amr_plasmid/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -262,10 +254,10 @@ process AMR_PLM_FROM_READS {
 process AMR_PLM_FROM_CONTIGS {
     
     tag { "AMR finding with Abricate" }
-    
-    conda "${projectDir}/conda/abricate.yaml"
 
-    publishDir "$params.outdir/amr_plasmid/", mode: 'symlink'
+    label 'perl'
+
+    publishDir "$params.outdir/amr_plasmid/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -301,9 +293,9 @@ process MLST_FROM_READS {
 
     tag {"MLST: ${uuid}"}
 
-    conda "${projectDir}/conda/mlst.yaml"
+    label 'perl'
 
-    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -323,9 +315,8 @@ process MLST_CDIFF_FROM_READS {
 
     tag {"MLST: ${assembly}"}
 
-    conda "${projectDir}/conda/mlst.yaml"
-
-    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    label 'perl'
+    publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -345,9 +336,8 @@ process MLST_FROM_CONTIGS {
 
     tag {"MLST: ${assembly}"}
 
-    conda "${projectDir}/conda/mlst.yaml"
-
-    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    label 'perl'
+    publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
     path(assembly)  
@@ -373,9 +363,9 @@ process SNIPPYFASTQ {
 
 	tag { "call snps from FQs: ${uuid}" }
 
-	conda "${projectDir}/conda/snippy.yaml"
+    label 'perl'
 	    
-	publishDir "$params.outdir/snps/", mode: "symlink"
+	publishDir "$params.outdir/snps/", mode: "copy"
 
     input:
     tuple val(uuid), path(reads), path(refFasta)
@@ -402,9 +392,9 @@ process SNIPPYFASTA {
 
 	tag { "call snps from contigs: ${uuid}" }
 
-	conda "${projectDir}/conda/snippy.yaml"
+    label 'perl'
         
-	publishDir "$params.outdir/snps/", mode: "symlink"
+	publishDir "$params.outdir/snps/", mode: "copy"
 
     input:
     tuple val(uuid), path(fasta)
@@ -427,11 +417,11 @@ SNP alignment
 process SNIPPYCORE {
     tag { "create snp alignments: SnippyCore" }
 
-    conda "${projectDir}/conda/snippy.yaml"
+    label 'perl'
 
     publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.vcf"
     publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.fasta"
-    publishDir "${params.outdir}/snippy_core", mode: "symlink", pattern: "wgs.core.fasta"
+    publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "wgs.core.fasta"
 
     input:
     path("*"), path(refFasta)  // collected list of snippy output directories + ref genome

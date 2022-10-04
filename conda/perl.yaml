@@ -1,0 +1,11 @@
+name: perl_env
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - abricate
+  - fastqc
+  - mlst=2.22.1
+  - quast
+  - shovill
+  - snippy

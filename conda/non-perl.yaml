@@ -1,0 +1,10 @@
+name: non_perl_env
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - fastp
+  - fasttree
+  - multiqc
+  - snp-dists
+  - snp-sites
