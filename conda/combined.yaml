@@ -1,0 +1,16 @@
+name: bugflow_env
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - abricate
+  - fastp
+  - fastqc
+  - fasttree
+  - mlst=2.22.1
+  - multiqc
+  - quast
+  - shovill
+  - snippy
+  - snp-dists
+  - snp-sites
