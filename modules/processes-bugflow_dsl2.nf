@@ -21,7 +21,7 @@ process RAWFASTQC {
 	
     tag {"FastQC raw ${uuid} reads"}
 	
-	publishDir "$params.outdir/raw_fastqc", mode: 'symlink'
+	publishDir "$params.outdir/raw_fastqc", mode: 'copy'
 
 	input:
     tuple val(uuid), path(reads) 
@@ -51,7 +51,7 @@ process FASTP {
     
 
     tag {"filter $uuid reads"}
-    publishDir "$params.outdir/clean_fastqs/", mode: "symlink"
+    publishDir "$params.outdir/clean_fastqs/", mode: "copy"
 
     input:
     tuple val(uuid), path(reads) 
@@ -110,7 +110,7 @@ process MULTIQC_READS {
 
 	tag {"Collate and summarize QC files"}
 
-	publishDir "$params.outdir/multiqc_reads/", mode: "symlink"
+	publishDir "$params.outdir/multiqc_reads/", mode: "copy"
 
 	input:
     path ('*')
@@ -139,7 +139,7 @@ process ASSEMBLY {
 
 	conda './conda/shovill.yaml'
   
-  	publishDir "$params.outdir/assemblies/", mode: "symlink"
+  	publishDir "$params.outdir/assemblies/", mode: "copy"
 
   	input:
   	tuple val(uuid), path(reads)
@@ -166,7 +166,7 @@ process QUAST_FROM_READS  {
 
     conda './conda/quast.yaml'
     
-    publishDir "$params.outdir/quast", mode: 'symlink'
+    publishDir "$params.outdir/quast", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -186,7 +186,7 @@ process QUAST_FROM_CONTIGS  {
 
     conda './conda/quast.yaml'
     
-    publishDir "$params.outdir/quast", mode: 'symlink'
+    publishDir "$params.outdir/quast", mode: 'copy'
     
     input:
     path(assembly)  
@@ -206,7 +206,7 @@ process MULTIQC_CONTIGS {
 
 	tag {"Collate and summarize QC files"}
 
-	publishDir "$params.outdir/multiqc_contigs/", mode: "symlink"
+	publishDir "$params.outdir/multiqc_contigs/", mode: "copy"
 
 	input:
     path ('*')
@@ -235,7 +235,7 @@ process AMR_PLM_FROM_READS {
     
     conda './conda/abricate.yaml'
 
-    publishDir "$params.outdir/amr_plasmid/", mode: 'symlink'
+    publishDir "$params.outdir/amr_plasmid/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -265,7 +265,7 @@ process AMR_PLM_FROM_CONTIGS {
     
     conda './conda/abricate.yaml'
 
-    publishDir "$params.outdir/amr_plasmid/", mode: 'symlink'
+    publishDir "$params.outdir/amr_plasmid/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -303,7 +303,7 @@ process MLST_FROM_READS {
 
     conda 'conda/mlst.yaml'
 
-    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -325,7 +325,7 @@ process MLST_CDIFF_FROM_READS {
 
     conda 'conda/mlst.yaml'
 
-    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
@@ -347,7 +347,7 @@ process MLST_FROM_CONTIGS {
 
     conda 'conda/mlst.yaml'
 
-    publishDir "$params.outdir/mlst/", mode: 'symlink'
+    publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
     path(assembly)  
@@ -375,11 +375,11 @@ process SNIPPYFASTQ {
 
 	conda './conda/snippy.yaml'
 	    
-	publishDir "$params.outdir/snps/", mode: "symlink"
+	publishDir "$params.outdir/snps/", mode: "copy"
 
     input:
     tuple val(uuid), path(reads), path(refFasta)
-    //path(refFasta)
+    
 
     output:
 	path("${uuid}_snippy/*") // whole output folder
@@ -404,7 +404,7 @@ process SNIPPYFASTA {
 
 	conda './conda/snippy.yaml'
         
-	publishDir "$params.outdir/snps/", mode: "symlink"
+	publishDir "$params.outdir/snps/", mode: "copy"
 
     input:
     tuple val(uuid), path(fasta)
@@ -431,10 +431,11 @@ process SNIPPYCORE {
 
     publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.vcf"
     publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.fasta"
-    publishDir "${params.outdir}/snippy_core", mode: "symlink", pattern: "wgs.core.fasta"
+    publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "wgs.core.fasta"
 
     input:
-    path("*"), path(refFasta)  // collected list of snippy output directories + ref genome
+    path("*") 
+    path(refFasta)  // collected list of snippy output directories + ref genome
     
 
     output:
@@ -443,7 +444,7 @@ process SNIPPYCORE {
     path("snp.core.vcf")
 
     """
-    snippy-core --ref ${refFasta} --prefix core *_snippy
+    snippy-core --ref ${refFasta} --prefix core ${params.outdir}/snps/*_snippy/
     mv core.aln snp.core.fasta
     mv core.vcf snp.core.vcf
     snippy-clean_full_aln core.full.aln > wgs.core.fasta
@@ -462,7 +463,7 @@ process INDEXREFERENCE {
     tag {"index reference FASTA"}
     
 	input:
-  	path (refFasta)
+    path (refFasta)
 	
 	output:
 	publishDir "$params.outdir"
@@ -494,17 +495,22 @@ process INDEXREFERENCE {
 Mask Reference Genome
 #==============================================
 */
- 
+
+
+
 process REFMASK {
-	input:
-	path (refFasta)	
+	
+    input:
+	path(refFasta)	
 
 	output:
-	path(${refFasta}.baseName.rpt_mask.gz), emit: refFasta.baseName
+    path("${refFasta.baseName}")
+    //path("${refFasta.baseName}.rpt_mask.hdr")
+	//path("${refFasta.baseName}.rpt_mask.gz"), emit: refFasta.baseName
 
 	script:
 	"""
-    genRefMask.py -r $refFasta -m 200 -p 95
+    genRefMask.py -r ${refFasta} -m 200 -p 95
     bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}
 	echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
 	tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
@@ -522,7 +528,8 @@ process BWA {
 	tag { "map clean ${uuid} reads to reference" }
     
 	input:
-	tuple val(uuid), path(reads), path(ref_index)
+	tuple val(uuid), path(reads)
+    path(refFasta)
 
     output:
     tuple val(uuid), path("${uuid}.aligned.bam"), emit: bwa_mapped
@@ -542,13 +549,17 @@ Remove duplicates using Samtools v 1.9
 */
 
 process REMOVE_DUPLICATES {
+    cpus 4
+
+    conda './conda/samtools.yaml'
+
 	tag "remove duplicates ${uuid}"
 	
 	publishDir "$params.outdir/${uuid}/bwa_mapped/${refFasta.baseName}/bam", mode: 'copy', pattern: "${uuid}.ba*"
     
 	input:
-    	tuple val (uuid), path (bwa_mapped)
-    	path(ref_index)
+    tuple val (uuid), path (bwa_mapped)
+    
 
     output:
     	tuple val(uuid), path("${uuid}.bam"), path("${uuid}.bam.bai"), emit: dup_removed
@@ -556,9 +567,9 @@ process REMOVE_DUPLICATES {
 	//sort by name to run fixmate (to remove BWA artefacts) and provide info for markdup
 	//sort by position to run markdup (and then remove duplicates)
     """
-    samtools sort -@${task.cpus} -n -o sorted.bam ${uuid}.aligned.sam
+    samtools sort -${task.cpus} -n -o sorted.bam ${uuid}.aligned.sam
     samtools fixmate -m sorted.bam fixed.sorted.bam
-    samtools sort -@${task.cpus} -o fixed.resorted.bam fixed.sorted.bam
+    samtools sort -${task.cpus} -o fixed.resorted.bam fixed.sorted.bam
     samtools markdup -r fixed.resorted.bam ${uuid}.bam
     samtools index ${uuid}.bam
     """
@@ -571,10 +582,11 @@ Run Samtools mpileup - creates BCF containing genotype likelihoods
 */
 
 process MPILEUP {
-    tag "${getShortId(uuid)}"
+
+    conda './conda/bcftools.yaml'
 
     input:
-    tuple val(uuid), file("${uuid}.bam"), file("${uuid}.bam.bai") 
+    tuple val(uuid), file(bam), file(bai) 
     file(refFasta)
     	
  
@@ -599,14 +611,17 @@ Call SNPs using Samtools call from mpileup file
 */
 
 process SNP_CALL {
-    tag "${getShortId(uuid)}"
+    
+    conda './conda/bcftools.yaml'
+    
+
     input:
-    	tuple val(uuid), file("pileup.bcf")
-    	file refFasta
-    	file ("*")
+    tuple val(uuid), file("pileup.bcf")
+    file refFasta
+    
  
     output:
-        tuple val(uuid), file("${uuid}.bcf"), file("${uuid}.allsites.bcf"), emit: snps_called
+    tuple val(uuid), path(bcf), path(allsites), emit: snps_called
    
     
     publishDir "$outdir/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy'
@@ -616,16 +631,16 @@ process SNP_CALL {
 		//-m +any option to join biallelic sites into multiallelic records
 		// and do this for any (i.e. SNPs and indels)
 	
+    script:
+
     """      
     # call variants only
     # 	-m use multiallelic model
     # 	-v output variants only
-    bcftools call --prior 0.01 -Ou -m -v pileup.bcf | \
-    	bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.bcf
+    bcftools call --prior 0.01 -Ou -m -v pileup.bcf | bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.bcf
     	
     # call all sites
-    bcftools call -Ou -m pileup.bcf | \
-    	bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.allsites.bcf
+    bcftools call -Ou -m pileup.bcf | bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.allsites.bcf
     """
 
 }
@@ -638,15 +653,17 @@ Produce Cleaner SNPs
 
 process FILTER_SNPS {
 
+    conda './conda/bcftools.yaml'
+
     input:
-    	tuple val(uuid), file("${uuid}.bcf"), file("${uuid}.allsites.bcf") 
-    	file(refFasta)
-    	file("*")
+    tuple val(uuid), file("${uuid}.bcf"), file("${uuid}.allsites.bcf") 
+    file(refFasta)
+
  
     output:
-        tuple val(uuid), file("${uuid}.snps.vcf.gz"), file("${uuid}.snps.vcf.gz.csi"), 
-    	file("${uuid}.zero_coverage.vcf.gz"), file("${uuid}.zero_coverage.vcf.gz.csi"), emit: filtered_snps
-    	file ("*")
+    tuple val(uuid), file("${uuid}.snps.vcf.gz"), file("${uuid}.snps.vcf.gz.csi"), 
+    file("${uuid}.zero_coverage.vcf.gz"), file("${uuid}.zero_coverage.vcf.gz.csi"), emit: filtered_snps
+    file ("*")
     
 	publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.snps.*"
 	publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.indels.*"
@@ -668,12 +685,11 @@ process FILTER_SNPS {
 	
     """
     #annotate vcf file with repetitive regions
-	bcftools annotate -a ${refFasta.baseName}.rpt_mask.gz -c CHROM,FROM,TO,RPT 
-		-h ${refFasta.baseName}.rpt_mask.hdr ${uuid}.bcf -Ob -o ${uuid}.masked.bcf.gz
+	bcftools annotate -a ${refFasta.baseName}.rpt_mask.gz -c CHROM,FROM,TO,RPT -h ${refFasta.baseName}.rpt_mask.hdr ${uuid}.bcf -Ob -o ${uuid}.masked.bcf.gz
     
     #filter vcf
     bcftools filter -s Q30 -e '%QUAL<30' -Ou ${uuid}.masked.bcf.gz | 
-    	bcftools filter -s HetroZ -e "GT='het'" -m+ -Ou | 
+        bcftools filter -s HetroZ -e "GT='het'" -m+ -Ou | 
     	bcftools filter -s OneEachWay -e 'DP4[2] == 0 || DP4[3] ==0' -m+ -Ou | 
     	bcftools filter -s RptRegion -e 'RPT=1' -m+ -Ou | 
     	bcftools filter -s Consensus90 -e '((DP4[2]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3]))<=0.9' -m+ -Ou | 
@@ -702,33 +718,37 @@ Generate a consensus FASTA file
 
 process CONSENSUS_FA {
 
-	input:
+        conda './conda/samtools.yaml'
+        conda './conda/bcftools.yaml'
+
+
+	    input:
 		tuple val(uuid), file("${uuid}.snps.vcf.gz"), file("${uuid}.snps.vcf.gz.csi"), 
     	file("${uuid}.zero_coverage.vcf.gz"), file("${uuid}.zero_coverage.vcf.gz.csi")
 		file(refFasta)
 	
-	output:
+	    output:
 		tuple val(uuid), file("${uuid}.fa"), emit: fa_file
 		//file("*")
 	
-	tag "${getShortId(uuid)}"
-	publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/fasta", mode: 'copy', pattern: "${uuid}.*"
-	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/fasta", mode: 'copy'
+	    tag "${getShortId(uuid)}"
+	    publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/fasta", mode: 'copy', pattern: "${uuid}.*"
+	    //publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/fasta", mode: 'copy'
 
-	// call consensus sequence
+	    // call consensus sequence
 		// -S flag in bcftools filter sets GT (genotype) to missing, with -M flag here
 		// setting value to N
-	"""
-	#create a temporary bcf file with genotype of filtered variants set to .
-	bcftools filter -S . -e 'FILTER != "PASS"' -Ob -o tmp.bcf.gz ${uuid}.snps.vcf.gz
-	bcftools index tmp.bcf.gz
+	    """
+	    #create a temporary bcf file with genotype of filtered variants set to .
+	    bcftools filter -S . -e 'FILTER != "PASS"' -Ob -o tmp.bcf.gz ${uuid}.snps.vcf.gz
+	    bcftools index tmp.bcf.gz
 	
-	#create consensus file with all the sites set to . above replaced as N
-	cat $refFasta | bcftools consensus -H 1 -M "N" tmp.bcf.gz > tmp.fa
+	    #create consensus file with all the sites set to . above replaced as N
+	    cat $refFasta | bcftools consensus -H 1 -M "N" tmp.bcf.gz > tmp.fa
 	
-	#set all the sites with zero coverage to be -
-	samtools faidx tmp.fa 
-	cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.fa
-	"""
+	    #set all the sites with zero coverage to be -
+	    samtools faidx tmp.fa 
+	    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.fa
+	    """
 }
 
