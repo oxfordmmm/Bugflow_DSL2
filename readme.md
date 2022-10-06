@@ -1,4 +1,4 @@
-# BUGflow DSL2
+# Bugflow DSL2
 A bacterial sequencing data processing pipeline
 
 ## Overview
