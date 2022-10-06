@@ -37,7 +37,7 @@ include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
 include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
-include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS } from './modules/processes-bugflow_dsl2.nf'
+include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; CGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
 include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
 
 /*
@@ -51,6 +51,7 @@ params.reads = " "
 params.outdir = " "
 params.contigs = " "
 params.mlstdb = " "
+params.tracedir = " "
 
 /*
 #==============================================
@@ -91,8 +92,8 @@ workflow shovill {
     CLEANFASTQC(FASTP.out.reads)
     MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
     ASSEMBLY(FASTP.out.reads)
-    QUAST(ASSEMBLY.out.collect())
-    MULTIQC_CONTIGS(QUAST.out.collect())
+    QUAST_FROM_READS(ASSEMBLY.out.collect())
+    MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
 }
 
 //return
@@ -208,4 +209,12 @@ workflow cdiff_asssembly_mlst_amr_plm {
        //MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
        MLST_CDIFF_FROM_READS(ASSEMBLY.out.assembly)
        AMR_PLM_FROM_READS(ASSEMBLY.out.assembly)
+}
+
+workflow cgmlst_fasta {
+    Channel.fromPath(params.contigs, checkIfExists:true)
+           //.view()
+           .set{assembly}
+    main:
+    CGMLST_CONTIGS_DE(assembly)
 }
