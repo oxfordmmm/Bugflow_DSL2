@@ -106,7 +106,8 @@ Collate and summarize all read QC files
 
 process MULTIQC_READS {
 	
-	conda './conda/multiqc.yaml'
+	//conda './conda/multiqc.yaml'
+    conda '/home/ubuntu/miniconda3/envs/multiqc_env'
 
 	tag {"Collate and summarize QC files"}
 
@@ -202,7 +203,8 @@ process QUAST_FROM_CONTIGS  {
 
 process MULTIQC_CONTIGS {
 	
-	conda './conda/multiqc.yaml'
+	//conda './conda/multiqc.yaml'
+    conda '/home/ubuntu/miniconda3/envs/multiqc_env'
 
 	tag {"Collate and summarize QC files"}
 
@@ -750,5 +752,46 @@ process CONSENSUS_FA {
 	    samtools faidx tmp.fa 
 	    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.fa
 	    """
+}
+
+
+process CGMLST_READS_DE {
+    tag { "cgMLST Profiling using Hash-cgMLST" }
+
+    // '/home/ubuntu/anaconda3/envs/hash-cgmlst_env'
+
+    publishDir "${params.outdir}/cgmlst", mode: "copy"
+
+    input:
+    tuple val(uuid) path(assembly)
+
+    output:
+    path("*")
+
+    script:
+
+    """
+    /usr/bin/python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${uuid}  -n ${uuid}_hash-cgmlst -s ridom_scheme/files -d ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn
+    """
+}
+
+process CGMLST_CONTIGS_DE {
+    tag { "cgMLST Profiling using Hash-cgMLST" }
+
+    // '/home/ubuntu/anaconda3/envs/hash-cgmlst_env'
+
+    publishDir "${params.outdir}/cgmlst", mode: "copy"
+
+    input:
+    path(assembly)
+
+    output:
+    path("*")
+
+    script:
+
+    """
+    /usr/bin/python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly}  -n ${assembly}_hash-cgmlst -s ridom_scheme/files -d ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${assembly} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn
+    """
 }
 
