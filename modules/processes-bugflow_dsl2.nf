@@ -375,7 +375,7 @@ process SNIPPYFASTQ {
 
 	tag { "call snps from FQs: ${uuid}" }
 
-	conda './conda/snippy.yaml'
+	//conda './conda/snippy.yaml'
 	    
 	publishDir "$params.outdir/snps/", mode: "copy"
 
@@ -404,7 +404,7 @@ process SNIPPYFASTA {
 
 	tag { "call snps from contigs: ${uuid}" }
 
-	conda './conda/snippy.yaml'
+	//conda './conda/snippy.yaml'
         
 	publishDir "$params.outdir/snps/", mode: "copy"
 
@@ -413,7 +413,7 @@ process SNIPPYFASTA {
     path(refFasta)
 
     output:
-    file("${uuid}_snippy/*") // whole output folder
+    file("${uuid}_snippy/*"), emit: snippy // whole output folder
 
     """
     snippy --cpus $task.cpus --report --outdir $uuid --prefix $uuid --reference ${refFasta} --ctgs $fasta 
@@ -429,21 +429,22 @@ SNP alignment
 process SNIPPYCORE {
     tag { "create snp alignments: SnippyCore" }
 
-    conda './conda/snippy.yaml'
+    //conda './conda/snippy.yaml'
+    
 
-    publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.vcf"
-    publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "snp.core.fasta"
-    publishDir "${params.outdir}/snippy_core", mode: "copy", pattern: "wgs.core.fasta"
+    publishDir "${params.outdir}/snippy_core", mode: "copy"
+    
 
     input:
-    path("*") 
+    path(snippy)
     path(refFasta)  // collected list of snippy output directories + ref genome
     
 
     output:
-    path("wgs.core.fasta")
+    //path("*")
     path("snp.core.fasta")
     path("snp.core.vcf")
+    path("wgs.core.fasta"), emit: for_gubbins
 
     """
     snippy-core --ref ${refFasta} --prefix core ${params.outdir}/snps/*_snippy/
@@ -451,6 +452,68 @@ process SNIPPYCORE {
     mv core.vcf snp.core.vcf
     snippy-clean_full_aln core.full.aln > wgs.core.fasta
 
+    """
+
+}
+
+process GUBBINS {
+    tag { "Remove recombinant segments with Gubbins" }
+
+    
+    publishDir "${params.outdir}/gubbins", mode: "copy"
+    
+
+    input:
+    path(for_gubbins)
+
+    output:
+    path("wgs.core.filtered_polymorphic_sites.fasta"), emit: polymorphsites
+    path("*")
+
+    script:
+    """
+    run_gubbins.py ${for_gubbins}
+
+    """
+}
+
+process SNP_SITES {
+
+    tag { "Create a SNP-only, non-rec alignment" }
+
+    
+    publishDir "${params.outdir}/snp-sites", mode: "copy"
+    
+    input:
+    path(polymorphsites)
+
+    output:
+    path("core.full.nonrec.aln"), emit: nonrec
+
+    script:
+    """
+    snp-sites -c ${polymorphsites} > core.full.nonrec.aln 
+
+    """
+    
+}
+
+process PHYLOTREE {
+
+    tag { "Create a non-rec tree using FastTree" }
+
+    
+    publishDir "${params.outdir}/tree", mode: "copy"
+    
+    input:
+    path(nonrec)
+
+    output:
+    path("*")
+
+    script:
+    """
+    FastTree -nt ${nonrec} > core.full.nonrec.fasttree.tre
     """
 
 }
