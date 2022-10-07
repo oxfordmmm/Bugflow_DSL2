@@ -469,28 +469,26 @@ process INDEXREFERENCE {
 	
 	output:
 	publishDir "$params.outdir"
-	path ("*"), emit: ref_index
+	path ("${refFasta}_bwa.fai"), emit: bwa_fai
+    path("${refFasta}_samtools.fai"), emit: sam_fai
+    //path ("*"), emit: ref_index
 
 	script:
 	"""
 	#bwa index
 	bwa index ${refFasta} > ${refFasta}_bwa.fai
-
 	#samtools index
 	samtools faidx ${refFasta} > ${refFasta}_samtools.fai
-
 	#blast indexes for self-self blast
 	makeblastdb -dbtype nucl -in $refFasta
-
 	#reference mask
     #genRefMask.py -r $refFasta -m 200 -p 95
     #bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}.rpt_mask.gz
 	#echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
 	#tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
-
-
     """
 }
+
 
 /*
 #==============================================
@@ -501,7 +499,8 @@ Mask Reference Genome
 
 
 process REFMASK {
-	
+
+	conda '/home/ubuntu/miniconda3/envs/blast_env'
     input:
 	path(refFasta)	
 
@@ -512,7 +511,7 @@ process REFMASK {
 
 	script:
 	"""
-    genRefMask.py -r ${refFasta} -m 200 -p 95
+    /home/ubuntu/Bugflow_DSL2/bin/genRefMask.py -r ${refFasta} -m 200 -p 95
     bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}
 	echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
 	tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
@@ -527,26 +526,27 @@ Map reads to Reference genome using BWA
 
 process BWA {
 	cpus 8
-	tag { "map clean ${uuid} reads to reference" }
+	
+    tag { "map clean ${uuid} reads to reference" }
+
+    publishDir "${params.outdir}/bwa", mode: "copy"
     
 	input:
-	tuple val(uuid), path(reads)
-    path(refFasta)
+	tuple val(uuid), path(reads), path(bwa_fai)
 
     output:
-    tuple val(uuid), path("${uuid}.aligned.bam"), emit: bwa_mapped
+    tuple val(uuid), path("${uuid}.aligned.sam"), emit: bwa_mapped
     
 	//don't add read group header here results in poorly formatted header
     
 	"""
-    bwa mem -r 1.5 -O 6 -t ${task.cpus} ref_index ${uuid}_clean.1.fq.gz ${uuid}_clean.2.fq.gz | samtools view -uS - | samtools sort -
-	> ${uuid}.aligned.bam
+    bwa mem -r 1.5 -O 6 -t ${task.cpus} bwa_fai ${uuid}_clean.1.fq.gz ${uuid}_clean.2.fq.gz | samtools view -uS - | samtools sort > ${uuid}.aligned.sam
     """
 }
 
 /*
 #==============================================
-Remove duplicates using Samtools v 1.9
+Remove duplicates using Samtools v.1.9
 #==============================================
 */
 
@@ -557,21 +557,21 @@ process REMOVE_DUPLICATES {
 
 	tag "remove duplicates ${uuid}"
 	
-	publishDir "$params.outdir/${uuid}/bwa_mapped/${refFasta.baseName}/bam", mode: 'copy', pattern: "${uuid}.ba*"
+	publishDir "${params.outdir}/bwa", mode: "copy"
     
 	input:
     tuple val (uuid), path (bwa_mapped)
     
 
     output:
-    	tuple val(uuid), path("${uuid}.bam"), path("${uuid}.bam.bai"), emit: dup_removed
+    tuple val(uuid), path("${uuid}.bam"), emit: dup_removed
 
 	//sort by name to run fixmate (to remove BWA artefacts) and provide info for markdup
 	//sort by position to run markdup (and then remove duplicates)
     """
-    samtools sort -${task.cpus} -n -o sorted.bam ${uuid}.aligned.sam
+    samtools sort  -n -o sorted.bam ${uuid}.aligned.sam
     samtools fixmate -m sorted.bam fixed.sorted.bam
-    samtools sort -${task.cpus} -o fixed.resorted.bam fixed.sorted.bam
+    samtools sort -o fixed.resorted.bam fixed.sorted.bam
     samtools markdup -r fixed.resorted.bam ${uuid}.bam
     samtools index ${uuid}.bam
     """
@@ -587,13 +587,14 @@ process MPILEUP {
 
     conda './conda/bcftools.yaml'
 
+    publishDir "${params.outdir}/pileup", mode: "copy"
+
     input:
-    tuple val(uuid), file(bam), file(bai) 
-    file(refFasta)
+    tuple val(uuid), path(bam), path(refFasta)
     	
  
     output:
-    tuple val(uuid), file("pileup.bcf"), emit: pileup
+    tuple val(uuid), path("${uuid}.pileup.bcf"), emit: pileup
    
     
     //publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy'
@@ -601,7 +602,7 @@ process MPILEUP {
 	//use bcftools mpileup to generate vcf file
 	//mpileup genearates the likelihood of each base at each site
  	"""
-    bcftools mpileup -Q25 -q30 -E -o40 -e20 -h100 -m2 -F0.002 -Ou -f ${refFasta} ${uuid}.bam > pileup.bcf
+    bcftools mpileup -Q25 -q30 -E -o40 -e20 -h100 -m2 -F0.002 -Ou -f ${refFasta} ${uuid}.bam > ${uuid}.pileup.bcf
     """
 
 }
@@ -618,15 +619,15 @@ process SNP_CALL {
     
 
     input:
-    tuple val(uuid), file("pileup.bcf")
-    file refFasta
+    tuple val(uuid), path(pileup), path(refFasta)
     
  
     output:
-    tuple val(uuid), path(bcf), path(allsites), emit: snps_called
-   
+    tuple val(uuid), path("${uuid}.bcf"), path("${uuid}.allsites.bcf"), emit: snps_called
+    //path("${uuid}.bcf"), emit: bcf
+    //path("${uuid}.allsites.bcf"), emit: allsites
     
-    publishDir "$outdir/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy'
+    publishDir "${params.outdir}/snps_called_bcf", mode: 'copy'
 
 	//call converts pileup to actual variants in the BCF or VCF file
 	//norm, normalises indels
@@ -639,10 +640,10 @@ process SNP_CALL {
     # call variants only
     # 	-m use multiallelic model
     # 	-v output variants only
-    bcftools call --prior 0.01 -Ou -m -v pileup.bcf | bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.bcf
+    bcftools call --prior 0.01 -Ou -m -v ${uuid}.pileup.bcf | bcftools norm -f ${refFasta} -m +any -Ou -o ${uuid}.bcf
     	
     # call all sites
-    bcftools call -Ou -m pileup.bcf | bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.allsites.bcf
+    bcftools call -Ou -m ${uuid}.pileup.bcf | bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.allsites.bcf
     """
 
 }
@@ -657,20 +658,32 @@ process FILTER_SNPS {
 
     conda './conda/bcftools.yaml'
 
+    publishDir "${params.outdir}/snps_called_vcf", mode: 'copy'
+
     input:
-    tuple val(uuid), file("${uuid}.bcf"), file("${uuid}.allsites.bcf") 
-    file(refFasta)
+    //tuple val(uuid), path(bcf),path(allsites) 
+    tuple val(uuid), path(snps_called)
+    path(refFasta)
 
  
     output:
-    tuple val(uuid), file("${uuid}.snps.vcf.gz"), file("${uuid}.snps.vcf.gz.csi"), 
-    file("${uuid}.zero_coverage.vcf.gz"), file("${uuid}.zero_coverage.vcf.gz.csi"), emit: filtered_snps
-    file ("*")
-    
-	publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.snps.*"
-	publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.indels.*"
-	publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.zero_coverage.*"
-	publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.all.*"
+    //tuple val(uuid), path("${uuid}.snps.vcf.gz")
+    //path("${uuid}.snps.vcf.gz")
+    //path("${uuid}.snps.vcf.gz.csi")
+    //path("${uuid}.zero_coverage.vcf.gz")
+    //path("${uuid}.zero_coverage.vcf.gz.csi"), emit: filtered_snps
+    //file ("*")
+    path("${uuid}.masked.bcf.gz")
+    path("${uuid}.all.vcf.gz")
+    path("${uuid}.snps.vcf.gz")
+    path("${uuid}.indels.vcf.gz")
+    path("${uuid}.zero_coverage.vcf.gz")
+
+
+	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.snps.*"
+	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.indels.*"
+	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.zero_coverage.*"
+	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.all.*"
 	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy'
 	
 	//use bcftools to filter normalised bcf file of variants from pileup and call
@@ -725,13 +738,14 @@ process CONSENSUS_FA {
 
 
 	    input:
-		tuple val(uuid), file("${uuid}.snps.vcf.gz"), file("${uuid}.snps.vcf.gz.csi"), 
+		tuple val(uuid), path("${uuid}.snps.vcf.gz"), file("${uuid}.snps.vcf.gz.csi"), 
     	file("${uuid}.zero_coverage.vcf.gz"), file("${uuid}.zero_coverage.vcf.gz.csi")
 		file(refFasta)
 	
 	    output:
-		tuple val(uuid), file("${uuid}.fa"), emit: fa_file
-		//file("*")
+		path("tmp.bcf.gz")
+        path("tmp.fa")
+        path("${uuid}.consensus.fa")
 	
 	    tag "${getShortId(uuid)}"
 	    publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/fasta", mode: 'copy', pattern: "${uuid}.*"
@@ -750,7 +764,7 @@ process CONSENSUS_FA {
 	
 	    #set all the sites with zero coverage to be -
 	    samtools faidx tmp.fa 
-	    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.fa
+	    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.consensus.fa
 	    """
 }
 
