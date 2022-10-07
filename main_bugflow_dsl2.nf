@@ -37,7 +37,7 @@ include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
 include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
-include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; CGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
+include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; CGMLST_READS_DE; CGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
 include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
 
 /*
@@ -170,25 +170,26 @@ workflow  snippy_core {
 }
 
 workflow cdiff_mapping_snpCalling_DE {
-       //Channel.fromFilePairs(params.reads, checkIfExists: true)
-           //.map{it}
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
            //.view()
-           //.set{reads}
+           .set{reads}
        Channel.fromPath(params.ref, checkIfExists:true)
            //.view()       
            .set{refFasta}
        main:
        INDEXREFERENCE(refFasta)     
        //REFMASK(refFasta)
-       //FASTP(reads)
-       //BWA(FASTP.out.reads, REFMASK.out)
-       //REMOVE_DUPLICATES(BWA.out)
-       //MPILEUP(REMOVE_DUPLICATES.out.dup_removed, refFasta)
-       //SNP_CALL(MPILEUP.out.pileup, refFasta)
-       //FILTER_SNPS(SNP_CALL.out.snps_called)
+       FASTP(reads)
+       BWA(FASTP.out.reads.combine(INDEXREFERENCE.out.bwa_fai))
+       REMOVE_DUPLICATES(BWA.out)
+       MPILEUP(REMOVE_DUPLICATES.out.dup_removed.combine(refFasta))
+       SNP_CALL(MPILEUP.out.pileup.combine(refFasta))
+       //FILTER_SNPS(SNP_CALL.out, REFMASK.out)
        //CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
      
 }
+
 
 
 workflow cdiff_asssembly_mlst_amr_plm {
@@ -207,6 +208,7 @@ workflow cdiff_asssembly_mlst_amr_plm {
        ASSEMBLY(FASTP.out.reads)
        //QUAST_FROM_READS(ASSEMBLY.out.assembly)
        //MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       CGMLST_READS_DE(ASSEMBLY.out.assembly)
        MLST_CDIFF_FROM_READS(ASSEMBLY.out.assembly)
        AMR_PLM_FROM_READS(ASSEMBLY.out.assembly)
 }
@@ -217,4 +219,15 @@ workflow cgmlst_fasta {
            .set{assembly}
     main:
     CGMLST_CONTIGS_DE(assembly)
+}
+
+workflow cgmlst_reads {
+    Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+    main:
+    FASTP(reads)
+    ASSEMBLY(FASTP.out.reads)
+    CGMLST_READS_DE(ASSEMBLY.out.assembly)
 }
