@@ -871,4 +871,3 @@ process CGMLST_CONTIGS_DE {
     /usr/bin/python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly}  -n ${assembly}_hash-cgmlst -s ridom_scheme/files -d ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${assembly} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn
     """
 }
-
