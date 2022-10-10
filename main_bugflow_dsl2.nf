@@ -39,7 +39,7 @@ include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
 include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
 include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; CGMLST_READS_DE; CGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
 include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
-include { GUBBINS; SNP_SITES; PHYLOTREE } from './modules/processes-bugflow_dsl2.nf'
+include { GUBBINS; SNP_SITES; SNP_DISTS; PHYLOTREE } from './modules/processes-bugflow_dsl2.nf'
 /*
 #==============================================
 Parameters
@@ -51,7 +51,7 @@ params.reads = " "
 params.outdir = " "
 params.contigs = " "
 params.mlstdb = " "
-params.tracedir = " "
+params.prefix = "core"
 
 /*
 #==============================================
@@ -163,7 +163,7 @@ workflow snippy_fasta {
 
 //return
 
-workflow  snippy_core {
+workflow  snippy_core_tree {
        Channel.fromFilePairs(params.reads, checkIfExists: true)
            .map{it}
            //.view()
@@ -176,7 +176,8 @@ workflow  snippy_core {
        SNIPPYCORE(SNIPPYFASTQ.out, refFasta)
        GUBBINS(SNIPPYCORE.out.for_gubbins)
        SNP_SITES(GUBBINS.out.polymorphsites) 
-       PHYLOTREE(SNP_SITES.out)       
+       SNP_DISTS(SNP_SITES.out.nonrec)
+       PHYLOTREE(SNP_SITES.out)      
 }
 
 workflow cdiff_mapping_snpCalling_DE {
@@ -212,7 +213,7 @@ workflow cdiff_asssembly_mlst_amr_plm {
            .set{refFasta}
        main:
        RAWFASTQC(reads)
-      FASTP(reads)
+       FASTP(reads)
        CLEANFASTQC(FASTP.out.reads)
        MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
        ASSEMBLY(FASTP.out.reads)
