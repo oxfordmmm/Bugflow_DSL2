@@ -5,7 +5,7 @@ channels:
 dependencies:
   - abricate
   - fastqc
-  - mlst=2.22.1
+  - mlst
   - quast
   - shovill
   - snippy

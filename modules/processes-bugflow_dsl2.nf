@@ -17,7 +17,7 @@ QC of raw reads
 process RAWFASTQC {
 	cpus 4
 
-    label 'non_perl'
+    label 'perl'
     tag {"FastQC raw ${uuid} reads"}
 	
 	publishDir "$params.outdir/raw_fastqc", mode: 'copy'
@@ -194,7 +194,7 @@ process QUAST_FROM_CONTIGS  {
 
 process MULTIQC_CONTIGS {
 	
-	conda "${projectDir}/conda/multiqc.yaml"
+	label 'non_perl'
 
 	tag {"Collate and summarize QC files"}
 
