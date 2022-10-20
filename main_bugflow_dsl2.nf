@@ -37,7 +37,7 @@ include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
 include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
-include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; CGMLST_READS_DE; CGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
+include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; HCGMLST_READS_DE; HCGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
 include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
 include { GUBBINS; SNP_SITES; SNP_DISTS; PHYLOTREE } from './modules/processes-bugflow_dsl2.nf'
 /*
@@ -160,7 +160,6 @@ workflow snippy_fasta {
     SNIPPYFASTA.out // results
 }  
 
-
 //return
 
 workflow  snippy_core_tree {
@@ -202,7 +201,6 @@ workflow cdiff_mapping_snpCalling_DE {
 }
 
 
-
 workflow cdiff_asssembly_mlst_amr_plm {
        Channel.fromFilePairs(params.reads, checkIfExists: true)
            .map{it}
@@ -219,7 +217,7 @@ workflow cdiff_asssembly_mlst_amr_plm {
        ASSEMBLY(FASTP.out.reads)
        //QUAST_FROM_READS(ASSEMBLY.out.assembly)
        //MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
-       CGMLST_READS_DE(ASSEMBLY.out.assembly)
+       //CGMLST_READS_DE(ASSEMBLY.out.assembly)
        MLST_CDIFF_FROM_READS(ASSEMBLY.out.assembly)
        AMR_PLM_FROM_READS(ASSEMBLY.out.assembly)
 }
@@ -229,7 +227,7 @@ workflow cgmlst_fasta {
            //.view()
            .set{assembly}
     main:
-    CGMLST_CONTIGS_DE(assembly)
+    HCGMLST_CONTIGS_DE(assembly)
 }
 
 workflow cgmlst_reads {
@@ -240,5 +238,5 @@ workflow cgmlst_reads {
     main:
     FASTP(reads)
     ASSEMBLY(FASTP.out.reads)
-    CGMLST_READS_DE(ASSEMBLY.out.assembly)
+    HCGMLST_READS_DE(ASSEMBLY.out.assembly)
 }
