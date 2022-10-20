@@ -47,7 +47,7 @@ Read cleaning with Fastp
 process FASTP {
 	cpus 8
 
-    conda './conda/fastp.yaml'
+    //conda './conda/fastp.yaml'
     
 
     tag {"filter $uuid reads"}
@@ -261,6 +261,7 @@ process AMR_PLM_FROM_READS {
     abricate --summary ${uuid}_plasmidfinder.tab > ${uuid}_plasmidfinder_summary.tsv
     """
 }
+
 process AMR_PLM_FROM_CONTIGS {
     
     tag { "AMR finding with Abricate" }
@@ -384,7 +385,7 @@ process SNIPPYFASTQ {
     
 
     output:
-	path("${uuid}_snippy/*") // whole output folder
+	path("${uuid}_snippy/*"), emit: snippy // whole output folder
 
     """
     snippy --cpus $task.cpus --outdir ${uuid}_snippy --prefix ${uuid} --reference ${refFasta} --R1 ${reads[0]} --R2 ${reads[1]} 
@@ -427,7 +428,8 @@ SNP alignment
 */
 
 process SNIPPYCORE {
-    tag { "create snp alignments: SnippyCore" }
+    
+    tag { "create snp alignments using snippy-core" }
 
     //conda './conda/snippy.yaml'
     
@@ -451,13 +453,15 @@ process SNIPPYCORE {
     mv core.aln snp.core.fasta
     mv core.vcf snp.core.vcf
     snippy-clean_full_aln core.full.aln > wgs.core.fasta
-
+    
     """
 
 }
 
 process GUBBINS {
-    tag { "Remove recombinant segments with Gubbins" }
+    cpus 16
+
+    tag { "remove recombinant segments with Gubbins" }
 
     
     publishDir "${params.outdir}/gubbins", mode: "copy"
@@ -472,14 +476,20 @@ process GUBBINS {
 
     script:
     """
-    run_gubbins.py ${for_gubbins}
+    run_gubbins.py ${for_gubbins} --threads  $task.cpus --remove-identical-sequences --tree-builder fasttree 
 
     """
 }
 
+/*
+#==================================================
+Create a SNP-only (non-recombinant) alignment
+#==================================================
+*/
+
 process SNP_SITES {
 
-    tag { "Create a SNP-only, non-rec alignment" }
+    tag { "create a SNP-only, non-rec alignment" }
 
     
     publishDir "${params.outdir}/snp-sites", mode: "copy"
@@ -498,9 +508,44 @@ process SNP_SITES {
     
 }
 
+/*
+#==================================================
+Create a pairwise SNP matrix
+#==================================================
+*/
+
+process SNP_DISTS {
+    tag { "create a pairwise SNP matrix" }
+
+    publishDir "${params.outdir}/snp-dists", mode: "copy"
+
+    input:
+    path(nonrec)
+
+    output:
+    path("*")
+    //path("${nonrec}.snp-dists.tsv"), snp_matrix_tsv
+    //path("${nonrec}.snp-dists.csv"), snp_matrix_csv
+    //path("${nonrec}.snp-dists_molten.csv"), snp_matrix_molten
+
+    script:
+    """
+    snp-dists ${nonrec} > ${nonrec}.snp-dists.tsv
+    snp-dists -c ${nonrec} > ${nonrec}.snp-dists.csv
+    snp-dists -c ${nonrec} -m > ${nonrec}.snp-dists_molten.csv
+
+    """
+}
+
+/*
+#===================================================================
+Generate a non-recombinat SNP-based phylogenomic tree using FastTree
+#===================================================================
+*/
+
 process PHYLOTREE {
 
-    tag { "Create a non-rec tree using FastTree" }
+    tag { "generate a non-rec tree using FastTree" }
 
     
     publishDir "${params.outdir}/tree", mode: "copy"
@@ -713,7 +758,7 @@ process SNP_CALL {
 
 /*
 #=================================================================
-Produce Cleaner SNPs
+Produce cleaner SNPs
 #=================================================================
 */
 
@@ -736,18 +781,13 @@ process FILTER_SNPS {
     //path("${uuid}.zero_coverage.vcf.gz")
     //path("${uuid}.zero_coverage.vcf.gz.csi"), emit: filtered_snps
     //file ("*")
-    path("${uuid}.masked.bcf.gz")
-    path("${uuid}.all.vcf.gz")
-    path("${uuid}.snps.vcf.gz")
-    path("${uuid}.indels.vcf.gz")
-    path("${uuid}.zero_coverage.vcf.gz")
+    path("${uuid}.masked.bcf.gz"), emit: masked_bcf
+    path("${uuid}.all.vcf.gz"), emit: all_vcf
+    path("${uuid}.snps.vcf.gz"), emit: snps_vcf
+    path("${uuid}.indels.vcf.gz"), emit: indels_vcf
+    path("${uuid}.zero_coverage.vcf.gz"), emit: zerocov_vcf
 
 
-	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.snps.*"
-	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.indels.*"
-	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.zero_coverage.*"
-	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy', pattern: "${uuid}.all.*"
-	//publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy'
 	
 	//use bcftools to filter normalised bcf file of variants from pileup and call
 	//use one line for each filter condition and label
@@ -799,10 +839,12 @@ process CONSENSUS_FA {
         conda './conda/samtools.yaml'
         conda './conda/bcftools.yaml'
 
+        publishDir "${params.outdir}/consensus_fa", mode: 'copy'
+
 
 	    input:
-		tuple val(uuid), path("${uuid}.snps.vcf.gz"), file("${uuid}.snps.vcf.gz.csi"), 
-    	file("${uuid}.zero_coverage.vcf.gz"), file("${uuid}.zero_coverage.vcf.gz.csi")
+		tuple val(uuid), path(snps_vcf), path("${uuid}.snps.vcf.gz.csi"), 
+    	path(zerocov_vcf), file("${uuid}.zero_coverage.vcf.gz.csi")
 		file(refFasta)
 	
 	    output:
@@ -810,10 +852,7 @@ process CONSENSUS_FA {
         path("tmp.fa")
         path("${uuid}.consensus.fa")
 	
-	    tag "${getShortId(uuid)}"
-	    publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/fasta", mode: 'copy', pattern: "${uuid}.*"
-	    //publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/fasta", mode: 'copy'
-
+	    
 	    // call consensus sequence
 		// -S flag in bcftools filter sets GT (genotype) to missing, with -M flag here
 		// setting value to N
@@ -832,7 +871,7 @@ process CONSENSUS_FA {
 }
 
 
-process CGMLST_READS_DE {
+process HCGMLST_READS_DE {
     tag { "cgMLST Profiling using Hash-cgMLST" }
 
     // '/home/ubuntu/anaconda3/envs/hash-cgmlst_env'
@@ -843,16 +882,19 @@ process CGMLST_READS_DE {
     tuple val(uuid) path(assembly)
 
     output:
-    path("*")
+    //path("*")
+    path("${uuid}_cgmlst.json"), emit: cgmlst_json
+    path("${uuid}_cgmlst.fa"), emit: cgmlst_fasta
+    path("${uuid}_cgmlst.profile"), emit: cgmlst_profile
 
     script:
 
     """
-    /usr/bin/python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${uuid}  -n ${uuid}_hash-cgmlst -s ridom_scheme/files -d ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn
+    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o /mnt/scratch/test_bugflow/output/cgmlst/${uuid} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
     """
 }
 
-process CGMLST_CONTIGS_DE {
+process HCGMLST_CONTIGS_DE {
     tag { "cgMLST Profiling using Hash-cgMLST" }
 
     // '/home/ubuntu/anaconda3/envs/hash-cgmlst_env'
@@ -863,11 +905,15 @@ process CGMLST_CONTIGS_DE {
     path(assembly)
 
     output:
-    path("*")
+    //path("*")
+    path("${assembly}_cgmlst.json"), emit: cgmlst_json
+    path("${assembly}_cgmlst.fa"), emit: cgmlst_fasta
+    path("${assembly}_cgmlst.profile"), emit: cgmlst_profile
 
     script:
 
     """
-    /usr/bin/python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly}  -n ${assembly}_hash-cgmlst -s ridom_scheme/files -d ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${assembly} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn
+    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${assembly}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o /mnt/scratch/test_bugflow/output/cgmlst/${assembly} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
     """
 }
+
