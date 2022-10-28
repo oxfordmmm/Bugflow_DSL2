@@ -30,16 +30,17 @@ Modules
 #==============================================
 */
 
-include { RAWFASTQC; FASTP; CLEANFASTQC; MULTIQC_READS; MULTIQC_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
+include { RAWFASTQC; FASTP; FASTP_SINGLE; CLEANFASTQC; CLEANFASTQC_SINGLE; MULTIQC_READS; MULTIQC_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
 include { ASSEMBLY } from './modules/processes-bugflow_dsl2.nf'
 include { QUAST_FROM_READS; QUAST_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
-include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
+include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS; PLATON_READS; CDIFF_AMRG_BLASTN_READS; SUMMARY_BLASTN } from './modules/processes-bugflow_dsl2.nf'
 include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; HCGMLST_READS_DE; HCGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
 include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
 include { GUBBINS; SNP_SITES; SNP_DISTS; PHYLOTREE } from './modules/processes-bugflow_dsl2.nf'
+
 /*
 #==============================================
 Parameters
@@ -52,6 +53,7 @@ params.outdir = " "
 params.contigs = " "
 params.mlstdb = " "
 params.prefix = "core"
+params.blastn = " "
 
 /*
 #==============================================
@@ -231,12 +233,76 @@ workflow cgmlst_fasta {
 }
 
 workflow cgmlst_reads {
-    Channel.fromFilePairs(params.reads, checkIfExists: true)
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
            .map{it}
            //.view()
            .set{reads}
-    main:
-    FASTP(reads)
-    ASSEMBLY(FASTP.out.reads)
-    HCGMLST_READS_DE(ASSEMBLY.out.assembly)
+       main:
+       FASTP(reads)
+       ASSEMBLY(FASTP.out.reads)
+       HCGMLST_READS_DE(ASSEMBLY.out.assembly)
+}
+
+workflow cdiff_hcgmlst_amrg_blastn {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       
+       main:
+       RAWFASTQC(reads)
+       FASTP(reads)
+       CLEANFASTQC(FASTP.out.reads)
+       //MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+       MULTIQC_READS(CLEANFASTQC.out.collect())
+       ASSEMBLY(FASTP.out.reads)
+       HCGMLST_CONTIGS_DE(ASSEMBLY.out.assembly)
+       CDIFF_AMRG_BLASTN_READS(ASSEMBLY.out.assembly)
+}
+
+workflow cdiff_hcgmlst_amrg_blastn_single {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       
+       main:
+       RAWFASTQC(reads)
+       FASTP(reads)
+       FASTP_SINGLE(reads)
+       //CLEANFASTQC(FASTP.out.reads)
+       CLEANFASTQC_SINGLE(FASTP_SINGLE.out.cat_fastq)
+       //MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+       //MULTIQC_READS(CLEANFASTQC.out.collect())
+       MULTIQC_READS(CLEANFASTQC_SINGLE.out.collect())
+       ASSEMBLY(FASTP.out.reads)
+       QUAST_FROM_READS(ASSEMBLY.out.assembly)
+       MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       HCGMLST_CONTIGS_DE(ASSEMBLY.out.assembly)
+       CDIFF_AMRG_BLASTN_READS(ASSEMBLY.out.assembly)
+}
+
+workflow assembly_plmcharac_amr_ns {
+
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       
+       main:
+       RAWFASTQC(reads)
+       FASTP(reads)
+       FASTP_SINGLE(reads)
+       //CLEANFASTQC(FASTP.out.reads)
+       CLEANFASTQC_SINGLE(FASTP_SINGLE.out.cat_fastq)
+       //MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+       //MULTIQC_READS(CLEANFASTQC.out.collect())
+       MULTIQC_READS(CLEANFASTQC_SINGLE.out.collect())
+       ASSEMBLY(FASTP.out.reads)
+       QUAST_FROM_READS(ASSEMBLY.out.assembly)
+       MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       MLST_FROM_READS(ASSEMBLY.out.assembly)
+       AMR_PLM_FROM_READS(ASSEMBLY.out.assembly)
+       PLATON_READS(ASSEMBLY.out.assembly)
+       
 }
