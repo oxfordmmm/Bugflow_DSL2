@@ -59,12 +59,40 @@ process FASTP {
     output:
     tuple val(uuid), path("${uuid}_clean_R*.fastq.gz"), emit: reads
     path("${uuid}.fastp.json"), emit: json
- 
+    
+
     script:
     """
     fastp -i ${reads[0]} -I ${reads[1]} -o ${uuid}_clean_R1.fastq.gz -O ${uuid}_clean_R2.fastq.gz -w ${task.cpus} -j ${uuid}.fastp.json
     
     """
+}
+
+process FASTP_SINGLE {
+    cpus 8
+
+    //conda './conda/fastp.yaml'
+    
+
+    tag {"filter $uuid reads"}
+    publishDir "$params.outdir/clean_fastqs/", mode: "copy"
+
+    input:
+    tuple val(uuid), path(reads) 
+    
+    output:
+    tuple val(uuid), path("${uuid}_clean_R*.fastq.gz"), emit: reads
+    path("${uuid}.fastp.json"), emit: json
+    tuple val(uuid), path("${uuid}.fastq.gz"), emit: cat_fastq
+
+    script:
+    """
+    
+    fastp -i ${reads[0]} -I ${reads[1]} -o ${uuid}_clean_R1.fastq.gz -O ${uuid}_clean_R2.fastq.gz -w ${task.cpus} -j ${uuid}.fastp.json
+    cat ${uuid}_clean_R*.fastq.gz > ${uuid}.fastq.gz
+
+    """
+
 }
 
 //return
@@ -82,16 +110,41 @@ process CLEANFASTQC {
 	
 	tag {"FastQC clean ${uuid} reads"}
 
+    publishDir "$params.outdir/clean_fastqc", mode: 'copy', pattern: "${uuid}*"
+
 	input:
     tuple val(uuid), path(reads)
 	
 	output:
 	path ("*")
+    
 	
-	publishDir "$params.outdir/clean_fastqc", mode: 'copy', pattern: "${uuid}*"
-	
+	script:
 	"""
-	fastqc --threads ${task.cpus} ${reads}
+    fastqc --threads ${task.cpus} ${reads}
+    
+	"""
+
+}
+
+process CLEANFASTQC_SINGLE {
+	cpus 4
+	
+    conda './conda/fastqc.yaml'
+	
+	tag {"FastQC clean ${uuid} reads"}
+
+    publishDir "$params.outdir/clean_fastqc_single", mode: 'copy', pattern: "${uuid}*"
+
+	input:
+    tuple val(uuid), path(cat_fastq)
+    
+	output:
+	path ("*")
+    
+	script:
+	"""
+    fastqc --threads ${task.cpus} ${cat_fastq}
 	"""
 
 }
@@ -117,8 +170,8 @@ process MULTIQC_READS {
     path ('*')
     
     output:
-    file "*multiqc_report.html"
-    file "*_data"
+    path ("*multiqc_report.html")
+    path ("*_data")
 
     script:
 
@@ -163,7 +216,7 @@ QC assembled genomes
 
 process QUAST_FROM_READS  {
     
-    tag { " QC assembly using Quast" }
+    tag { "QC assembly using Quast" }
 
     conda './conda/quast.yaml'
     
@@ -183,7 +236,7 @@ process QUAST_FROM_READS  {
 
 process QUAST_FROM_CONTIGS  {
     
-    tag { " QC assembly using Quast" }
+    tag { "QC assembly using Quast" }
 
     conda './conda/quast.yaml'
     
@@ -872,9 +925,10 @@ process CONSENSUS_FA {
 
 
 process HCGMLST_READS_DE {
-    tag { "cgMLST Profiling using Hash-cgMLST" }
+    tag { "cgMLST Profiling using Hash-cgMLST: ${uuid}" }
 
     // '/home/ubuntu/anaconda3/envs/hash-cgmlst_env'
+    conda './conda/hash-cgmlst.yaml'
 
     publishDir "${params.outdir}/cgmlst", mode: "copy"
 
@@ -890,30 +944,102 @@ process HCGMLST_READS_DE {
     script:
 
     """
-    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o /mnt/scratch/test_bugflow/output/cgmlst/${uuid} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
+    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
     """
 }
 
 process HCGMLST_CONTIGS_DE {
     tag { "cgMLST Profiling using Hash-cgMLST" }
 
+    //mamba activate hash-cgmlst_env
     // '/home/ubuntu/anaconda3/envs/hash-cgmlst_env'
+    conda './conda/hash-cgmlst.yaml'
 
     publishDir "${params.outdir}/cgmlst", mode: "copy"
 
     input:
-    path(assembly)
+    //path(assembly)
+    tuple val(uuid), path(assembly)
 
     output:
-    //path("*")
-    path("${assembly}_cgmlst.json"), emit: cgmlst_json
-    path("${assembly}_cgmlst.fa"), emit: cgmlst_fasta
-    path("${assembly}_cgmlst.profile"), emit: cgmlst_profile
+    path("*")
+    //path("${assembly}_cgmlst.json"), emit: cgmlst_json
+    //path("${assembly}_cgmlst.fa"), emit: cgmlst_fasta
+    //path("${assembly}_cgmlst.profile"), emit: cgmlst_profile
 
     script:
 
     """
-    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${assembly}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o /mnt/scratch/test_bugflow/output/cgmlst/${assembly} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
+    #python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${assembly} -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${assembly} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
+    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${uuid} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
+    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/compareProfiles.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons.txt
+    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/compareProfilesExclude.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons_exclude26genes.txt
     """
 }
 
+process CDIFF_AMRG_BLASTN_READS {
+    tag { "annotate ${uuid} contigs with custom Cdiff AMRG db" }
+
+    conda './conda/blast.yaml'
+
+    publishDir "${params.outdir}/cdiff_blastn", mode: "copy"
+
+    input:
+    tuple val(uuid), path(reads)
+
+    output:
+    path("*")
+    path("cdiffamr-*_blastn.tsv"), emit: blastn
+
+    script:
+
+    """
+    makeblastdb -in /mnt/scratch/test_bugflow/input/Cdiff_AMR/Blastn/cdiffamr_full.fasta -parse_seqids  -title "C. diff AMRG db" -dbtype nucl -out cdiffamr
+    blastn -query ${params.outdir}/assemblies/${uuid}_contigs.fa -db cdiffamr -out cdiffamr-${uuid}.tsv -perc_identity 95 -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
+    echo -e "qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore" > cdiffamr-${uuid}_blastn.tsv && cat cdiffamr-${uuid}.tsv >> cdiffamr-${uuid}_blastn.tsv
+    
+    """
+    
+}
+
+process SUMMARY_BLASTN {
+    tag { "cat BLASTN results" }
+
+    conda './conda/blast.yaml'
+
+    publishDir "${params.outdir}/cdiff_blastn", mode: "copy"
+
+    input:
+    path(blastn)
+
+    output:
+    path("*")
+    
+
+    script:
+    """
+    cat ${blastn} > summary_AMRG_blastn_report.tsv
+    #python3 /home/ubuntu/Bugflow_DSL2/bin/tsv_to_html.py summary_AMRG_blastn_report.tsv summary_AMRG_blastn_report.html
+    """
+}
+
+process PLATON_READS {
+
+    cpus 8
+
+    tag { "ID plasmids in short-read draft assemblies" }
+
+    conda './conda/platon.yaml'
+
+    input:
+    tuple val(uuid), path(assembly)
+
+    output:
+    path("*")
+
+    script:
+    """
+    platon --db ./bin/platon_db ${assembly} --prefix ${uuid} --threads ${task.cpus}
+    """ 
+
+}
