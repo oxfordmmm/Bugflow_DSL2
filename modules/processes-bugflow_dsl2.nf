@@ -1133,7 +1133,7 @@ cpus 8
 
     script:
     """
-    platon  ${assembly} --prefix ${assembly} --threads ${task.cpus}
+    platon  ${assembly} --prefix ${uuid} --threads ${task.cpus}
     """ 
 
 }
