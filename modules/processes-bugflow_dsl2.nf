@@ -38,6 +38,35 @@ process RAWFASTQC {
 
 }
 
+process RAWFASTQC_SINGLE {
+	cpus 4
+
+    conda './conda/fastqc.yaml'
+	
+    tag {"FastQC raw ${uuid} reads"}
+	
+	publishDir "$params.outdir/raw_fastqc_single", mode: 'copy'
+
+	input:
+    tuple val(uuid), path(reads) 
+    
+	
+	output:
+    path("${uuid}_raw_reads.fastq.gz"), emit: cat_raw
+	path("*")
+	
+	script:
+	
+	"""
+    cat ${reads[0]} ${reads[1]} > ${uuid}_raw_reads.fastq.gz
+	fastqc --threads ${task.cpus} ${uuid}_raw_reads.fastq.gz
+    unzip ${uuid}_raw_reads_fastqc.zip
+    rm ${uuid}_raw_reads_fastqc.zip
+    mv ${uuid}_raw_reads_fastqc/fastqc_data.txt ${uuid}_raw_reads_fastqc/${uuid}.txt
+	
+	"""
+}
+
 /*
 #==============================================
 Read cleaning with Fastp
@@ -47,7 +76,7 @@ Read cleaning with Fastp
 process FASTP {
 	cpus 8
 
-    //conda './conda/fastp.yaml'
+    conda './conda/fastp.yaml'
     
 
     tag {"filter $uuid reads"}
@@ -71,7 +100,7 @@ process FASTP {
 process FASTP_SINGLE {
     cpus 8
 
-    //conda './conda/fastp.yaml'
+    conda './conda/fastp.yaml'
     
 
     tag {"filter $uuid reads"}
@@ -145,6 +174,8 @@ process CLEANFASTQC_SINGLE {
 	script:
 	"""
     fastqc --threads ${task.cpus} ${cat_fastq}
+    unzip ${uuid}_fastqc.zip
+    cp ${uuid}_fastqc/fastqc_data.txt ${uuid}_fastqc/${uuid}.txt
 	"""
 
 }
@@ -159,8 +190,7 @@ Collate and summarize all read QC files
 
 process MULTIQC_READS {
 	
-	//conda './conda/multiqc.yaml'
-    conda '/home/ubuntu/miniconda3/envs/multiqc_env'
+	conda './conda/multiqc.yaml'
 
 	tag {"Collate and summarize QC files"}
 
@@ -231,6 +261,7 @@ process QUAST_FROM_READS  {
     script:
     """
     quast.py  ${assembly} -o quast_${uuid}
+    cp quast_${uuid}/report.tsv quast_${uuid}/${uuid}_Quastreport.tsv
     """
 }
 
@@ -243,7 +274,7 @@ process QUAST_FROM_CONTIGS  {
     publishDir "$params.outdir/quast", mode: 'copy'
     
     input:
-    path(assembly)  
+    tuple val(uuid), path(assembly)  
     
     output:
     path("quast_${assembly}")
@@ -256,8 +287,8 @@ process QUAST_FROM_CONTIGS  {
 
 process MULTIQC_CONTIGS {
 	
-	//conda './conda/multiqc.yaml'
-    conda '/home/ubuntu/miniconda3/envs/multiqc_env'
+	conda './conda/multiqc.yaml'
+
 
 	tag {"Collate and summarize QC files"}
 
@@ -303,6 +334,7 @@ process AMR_PLM_FROM_READS {
     path("${uuid}_card_summary.tsv")
     path("${uuid}_resfinder_summary.tsv")
     path("${uuid}_plasmidfinder_summary.tsv")
+    path("*")
 
     script:
     """
@@ -328,21 +360,16 @@ process AMR_PLM_FROM_CONTIGS {
     
     
     output:
-    path("${assembly}_card.tab")
-    path("${assembly}_resfinder.tab")
-    path("${assembly}_plasmidfinder.tab")
-    path("${assembly}_card_summary.tsv")
-    path("${assembly}_resfinder_summary.tsv")
-    path("${assembly}_plasmidfinder_summary.tsv")
+    path("*")
 
     script:
     """
-    abricate  --db card ${assembly} > ${assembly}_card.tab
-    abricate --summary ${assembly}_card.tab > ${assembly}_card_summary.tsv
-    abricate  --db resfinder ${assembly} > ${assembly}_resfinder.tab
-    abricate --summary ${assembly}_resfinder.tab > ${assembly}_resfinder_summary.tsv
-    abricate  --db plasmidfinder ${assembly} > ${assembly}_plasmidfinder.tab
-    abricate --summary ${assembly}_plasmidfinder.tab > ${assembly}_plasmidfinder_summary.tsv
+    abricate  --db card ${assembly} > ${uuid}_card.tab
+    abricate --summary ${uuid}_card.tab > ${uuid}_card_amr_summary.tsv
+    abricate  --db resfinder ${assembly} > ${uuid}_resfinder_amr.tab
+    abricate --summary ${uuid}_resfinder_amr.tab > ${uuid}_resfinder_summary.tsv
+    abricate  --db plasmidfinder ${assembly} > ${uuid}_plasmidfinder.tab
+    abricate --summary ${uuid}_plasmidfinder.tab > ${uuid}_plasmidfinder_summary.tsv
     """
 }
 
@@ -406,14 +433,14 @@ process MLST_FROM_CONTIGS {
     publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
-    path(assembly)  
+    tuple val(uuid), path(assembly)
     
     
     output:
-    path("${assembly}_ST.tsv")
+    path("${uuid}_ST.tsv")
 
     """
-    mlst --scheme $params.mlstdb ${assembly} > ${assembly}_ST.tsv
+    mlst --scheme $params.mlstdb ${assembly} > ${uuid}_ST.tsv
     """
 
 }
@@ -429,7 +456,7 @@ process SNIPPYFASTQ {
 
 	tag { "call snps from FQs: ${uuid}" }
 
-	//conda './conda/snippy.yaml'
+	conda './conda/snippy.yaml'
 	    
 	publishDir "$params.outdir/snps/", mode: "copy"
 
@@ -458,7 +485,7 @@ process SNIPPYFASTA {
 
 	tag { "call snps from contigs: ${uuid}" }
 
-	//conda './conda/snippy.yaml'
+	conda './conda/snippy.yaml'
         
 	publishDir "$params.outdir/snps/", mode: "copy"
 
@@ -484,7 +511,7 @@ process SNIPPYCORE {
     
     tag { "create snp alignments using snippy-core" }
 
-    //conda './conda/snippy.yaml'
+    conda './conda/snippy.yaml'
     
 
     publishDir "${params.outdir}/snippy_core", mode: "copy"
@@ -662,6 +689,7 @@ Mask Reference Genome
 process REFMASK {
 
 	conda '/home/ubuntu/miniconda3/envs/blast_env'
+
     input:
 	path(refFasta)	
 
@@ -927,13 +955,12 @@ process CONSENSUS_FA {
 process HCGMLST_READS_DE {
     tag { "cgMLST Profiling using Hash-cgMLST: ${uuid}" }
 
-    // '/home/ubuntu/anaconda3/envs/hash-cgmlst_env'
     conda './conda/hash-cgmlst.yaml'
 
     publishDir "${params.outdir}/cgmlst", mode: "copy"
 
     input:
-    tuple val(uuid) path(assembly)
+    tuple val(uuid), path(assembly)
 
     output:
     //path("*")
@@ -944,21 +971,19 @@ process HCGMLST_READS_DE {
     script:
 
     """
-    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
+    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
     """
 }
 
 process HCGMLST_CONTIGS_DE {
     tag { "cgMLST Profiling using Hash-cgMLST" }
 
-    //mamba activate hash-cgmlst_env
-    // '/home/ubuntu/anaconda3/envs/hash-cgmlst_env'
+    
     conda './conda/hash-cgmlst.yaml'
 
     publishDir "${params.outdir}/cgmlst", mode: "copy"
 
     input:
-    //path(assembly)
     tuple val(uuid), path(assembly)
 
     output:
@@ -970,8 +995,8 @@ process HCGMLST_CONTIGS_DE {
     script:
 
     """
-    #python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${assembly} -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${assembly} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
-    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${uuid} -b /home/ubuntu/anaconda3/envs/hash-cgmlst_env/bin/blastn 
+    #python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${assembly} -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${assembly} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
+    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${uuid} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
     python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/compareProfiles.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons.txt
     python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/compareProfilesExclude.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons_exclude26genes.txt
     """
@@ -1002,6 +1027,7 @@ process CDIFF_AMRG_BLASTN_READS {
     
 }
 
+
 process SUMMARY_BLASTN {
     tag { "cat BLASTN results" }
 
@@ -1023,6 +1049,50 @@ process SUMMARY_BLASTN {
     """
 }
 
+process AMR_ABRFORMAT {
+    tag { "AMR finding using custom C. diff db" }
+    
+    conda './conda/abricate.yaml'
+
+    publishDir "$params.outdir/amr_cdiff_abr/", mode: 'copy'
+    
+    input:
+    tuple val(uuid), path(assembly)  
+    
+    
+    output:
+    path("*")
+    
+
+    script:
+    """
+    abricate  --db cdiffamr ${assembly} > ${uuid}_cdiffamr.tab
+    abricate --summary  *_cdiffamr.tab > cdiffamr_amr_summary.tsv
+    """
+}
+
+process AMRFINDERPLUS_CDIFF {
+    tag { "AMR finding using AMRFinderPlus" }
+    
+    conda './conda/ncbi-amrfinderplus.yaml'
+
+    publishDir "$params.outdir/amr_cdiff_pointmuts/", mode: 'copy'
+    
+    input:
+    tuple val(uuid), path(assembly)  
+    
+    
+    output:
+    path("*")
+
+    script:
+    """
+    amrfinder --organism Clostridioides_difficile -d /mnt/scratch/miniconda3/envs/amrfinderplus_env/share/amrfinderplus/data/2022-10-11.2/ -n ${assembly} > ${uuid}_forpointmuts.tsv
+    """
+
+}
+
+
 process PLATON_READS {
 
     cpus 8
@@ -1030,6 +1100,8 @@ process PLATON_READS {
     tag { "ID plasmids in short-read draft assemblies" }
 
     conda './conda/platon.yaml'
+
+    publishDir "${params.outdir}/platon", mode: "copy"
 
     input:
     tuple val(uuid), path(assembly)
@@ -1039,7 +1111,50 @@ process PLATON_READS {
 
     script:
     """
-    platon --db ./bin/platon_db ${assembly} --prefix ${uuid} --threads ${task.cpus}
+    platon  ${assembly} --prefix ${uuid} --threads ${task.cpus}
+    """ 
+
+}
+
+process PLATON_CONTIGS {
+cpus 8
+
+    tag { "ID plasmids in short-read draft assemblies" }
+
+    conda './conda/platon.yaml'
+
+    publishDir "${params.outdir}/platon", mode: "copy"
+
+    input:
+    tuple val(uuid), path(assembly)
+
+    output:
+    path("*")
+
+    script:
+    """
+    platon  ${assembly} --prefix ${assembly} --threads ${task.cpus}
+    """ 
+
+}
+
+process MOBTYPER {
+    tag { "MOB-typer and MOB-recon: ${uuid}" }
+
+    conda './conda/mobsuite.yaml'
+
+    publishDir "${params.outdir}/mobsuite", mode: "copy"
+
+    input:
+    tuple val(uuid), path(assembly)
+
+    output:
+    path("*")
+
+    script:
+    """
+    mob_typer -x -i ${assembly} -o ${uuid}_mobtyper_results.txt
+    #mob_recon --infile ${assembly} --outdir ${uuid}_mobrecon_outdir
     """ 
 
 }
