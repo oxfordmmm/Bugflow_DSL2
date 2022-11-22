@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 
 #use PDF::API2;
+#use DateTime;
+use Time::Piece;
 
 $fqc = $ARGV[0]; #FastQC output
 $qst = $ARGV[1]; #Quast output
@@ -28,10 +30,15 @@ while(<qc>){
     #print "$f\n";
     #if ($f =~ "Basic Statistics" && $f =~ "pass"){print "Overall sequence quality\tPass\n"} elsif ($f =~ "Basic Statistics" && $f =~ "fail") {print "Overall sequencing quality\tFail\n"}
     if ($f =~ /Filename/){
+        $date = localtime->strftime('%m/%d/%Y'); 
+        #print "$datetime\n";
         @fname = split/\t/,$f;
         for $n (0..$#fname){}
         $fname[1] =~ s/\_raw\_reads\.fastq\.gz//g;
-        print sample "SAMPLE:\t\t\t$fname[1]\n";
+        #print sample "Sample details\n";
+        print sample "Specimen identifier:\t\t$fname[1]\t\t\t\tCollection date:\t\t$date\n";
+        print sample "Sequence GUUID:\t\t$fname[1]\t\tSequencing date:\t\t$date\n";
+        print sample "Sequence plate name:\t\t$fname[1]\t\t\t\tReport date:\t\t$date\n";
     }
     if ($f =~ /Total Sequences/){
         @seqs = split/\t/,$f;
@@ -78,7 +85,7 @@ while(<qc>){
 
 }
 
-close(fqc);
+close(qc);
 
 while(<qt>){
     chomp;
@@ -122,6 +129,8 @@ while(<qt>){
 
 }
 print "\n\n";
+
+close(sample);
 
 close(qt);
 
