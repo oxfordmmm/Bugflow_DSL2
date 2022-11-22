@@ -9,11 +9,13 @@ open(qc, $fqc);
 open(qt, $qst);
 
 $outqc = "QC_summary_table.tsv";
+$sample = "sample_name.tsv";
 
 system("echo Sample Name\t$fqc | cut -f 1 -d '.' ");
 #system("echo Sample Name\t$fqc | cut -f 1 -d '.' >> $outqc");
 
 open(outqc, '>>', $outqc);
+open(sample, '>', $sample);
 
 #print outqc "Sequence Quality\n";
 print "\nGENOME QUALITY STATS\n";
@@ -28,8 +30,8 @@ while(<qc>){
     if ($f =~ /Filename/){
         @fname = split/\t/,$f;
         for $n (0..$#fname){}
-        $fname[1] =~ s/\.fastq.gz//g;
-        #print outqc "Sample name\t$fname[1]\n";
+        $fname[1] =~ s/\_raw\_reads\.fastq\.gz//g;
+        print sample "SAMPLE:\t\t\t$fname[1]\n";
     }
     if ($f =~ /Total Sequences/){
         @seqs = split/\t/,$f;
