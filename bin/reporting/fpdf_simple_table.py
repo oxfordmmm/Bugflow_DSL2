@@ -42,8 +42,8 @@ def simple_table(spacing=1):
 
 #Show sample details
     pdf.set_font("Times", "B", size=14)
-    pdf.set_text_color(0,0,255) #blue
-    pdf.ln(10)  # move 10 down
+    pdf.set_text_color(0,0,200) #blue
+    pdf.ln(15)  # move 10 down
     pdf.cell(w=0, h=5, txt="Sample details", align = "L", ln=2)
     pdf.ln(10)
 
@@ -54,7 +54,7 @@ def simple_table(spacing=1):
 
 #Append QC stats
     pdf.set_font("Times", "B", size=14)
-    pdf.set_text_color(0,0,255) #blue
+    pdf.set_text_color(0,0,200) #blue
     pdf.cell(w=0, h=5, txt="Sequencing Quality Stats", align = "L", ln=2)
     
     pdf.set_font("Times", size=14)
@@ -64,7 +64,7 @@ def simple_table(spacing=1):
 
 #Append AMR Profile
     pdf.set_font("Times", "B", size=14)
-    pdf.set_text_color(0,0,255) #blue
+    pdf.set_text_color(0,0,200) #blue
     pdf.cell(w=0, h=5, txt="Antimicrobial Resistance Profile", align = "L", ln=2)
     pdf.set_font("Times", size=14)
     pdf.ln(10)
