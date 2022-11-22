@@ -8,6 +8,12 @@ import numpy as np
 
 def simple_table(spacing=1):
 
+#Sample name
+    with open('sample_name.tsv') as h:
+        sample = h.readlines()
+    name = ("").join(sample)
+    print(name)
+
 #Read in QC stats in TSV
     with open('QC_summary_table.tsv') as g:
         lines = g.readlines()
@@ -24,12 +30,19 @@ def simple_table(spacing=1):
     HEIGHT = 297
     pdf = FPDF()
     pdf.add_page()
-    pdf.image('logo.png', x=0, y=0, w=WIDTH/2-10)
+    pdf.image('oxford.png', x=0, y=0, w=WIDTH/2-10)
     pdf.image('leeds.jpg', x=120, y=WIDTH/9.5, w=80)
+    pdf.ln(30)  # move 20 down
+
+#Show sample name
+    pdf.set_font("Times", "B", size=15)
+    pdf.ln(10)  # move 30 down
+    pdf.cell(w=0, h=5, txt=name, align = "L", ln=2)
+    pdf.ln(5)
+
 
 #Append QC stats
     pdf.set_font("Times", "B", size=14)
-    pdf.ln(50)  # move 50 down
     pdf.cell(w=0, h=5, txt="Sequencing Quality Stats", align = "C", ln=2)
     pdf.set_font("Times", size=14)
     pdf.multi_cell(w=200, h=5, txt = tsv)
@@ -54,4 +67,3 @@ def simple_table(spacing=1):
  
 if __name__ == '__main__':
     simple_table()
-
