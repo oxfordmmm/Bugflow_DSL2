@@ -16,7 +16,12 @@ Assembly
  - Shovill (spades) 
 */
 
-// enable DSL2
+/*
+#==============================================
+Enable DSL2
+#==============================================
+*/
+
 nextflow.enable.dsl = 2
 
 /*
@@ -25,14 +30,17 @@ Modules
 #==============================================
 */
 
-include { RAWFASTQC; FASTP; CLEANFASTQC; MULTIQC_READS; MULTIQC_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
+include { RAWFASTQC; RAWFASTQC_SINGLE; FASTP; FASTP_SINGLE; CLEANFASTQC; CLEANFASTQC_SINGLE; MULTIQC_READS; MULTIQC_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
 include { ASSEMBLY } from './modules/processes-bugflow_dsl2.nf'
 include { QUAST_FROM_READS; QUAST_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTQ } from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTA } from './modules/processes-bugflow_dsl2.nf' 
 include { SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
-include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS } from './modules/processes-bugflow_dsl2.nf'
-include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS } from './modules/processes-bugflow_dsl2.nf'
+include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS; PLATON_READS; PLATON_CONTIGS; MOBTYPER; CDIFF_AMRG_BLASTN_READS; SUMMARY_BLASTN; AMR_ABRFORMAT; AMRFINDERPLUS_CDIFF} from './modules/processes-bugflow_dsl2.nf'
+include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; HCGMLST_READS_DE; HCGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
+include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
+include { GUBBINS; SNP_SITES; SNP_DISTS; PHYLOTREE } from './modules/processes-bugflow_dsl2.nf'
+
 /*
 #==============================================
 Parameters
@@ -43,7 +51,9 @@ params.ref = " "
 params.reads = " "
 params.outdir = " "
 params.contigs = " "
-params.mlstdb = " "
+params.mlstdb = "ecoli"
+params.prefix = "core"
+params.blastn = " "
 
 /*
 #==============================================
@@ -84,14 +94,15 @@ workflow shovill {
     CLEANFASTQC(FASTP.out.reads)
     MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
     ASSEMBLY(FASTP.out.reads)
-    QUAST(ASSEMBLY.out.collect())
-    MULTIQC_CONTIGS(QUAST.out.collect())
+    QUAST_FROM_READS(ASSEMBLY.out.collect())
+    MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
 }
 
 //return
 
 workflow qc_contigs {
     Channel.fromPath(params.contigs, checkIfExists:true)
+           .map({it -> tuple(it.baseName, it)})
            //.view()
            .set{assembly}
     main:       
@@ -100,9 +111,9 @@ workflow qc_contigs {
 }
 
 workflow mlst_amr_plm_reads {
-    Channel.fromPath(params.contigs, checkIfExists:true)
+    Channel.fromPath(params.reads, checkIfExists:true)
            //.view()
-           .set{assembly}
+           .set{reads}
     main:
     FASTP(reads)
     ASSEMBLY(FASTP.out.reads)
@@ -112,6 +123,7 @@ workflow mlst_amr_plm_reads {
 
 workflow mlst_amr_plm_contigs {
     Channel.fromPath(params.contigs, checkIfExists:true)
+           .map({it -> tuple(it.baseName, it)})
            //.view()
            .set{assembly}
     main:
@@ -133,11 +145,12 @@ workflow snippy_fastq {
     main:
     FASTP(reads)
     SNIPPYFASTQ(FASTP.out.reads.combine(refFasta))
-    //SNIPPYCORE(SNIPPYFASTQ.out.combine(refFasta)) 
+    SNIPPYCORE(SNIPPYFASTQ.out,refFasta) 
 }       
 
 workflow snippy_fasta {
     Channel.fromPath(params.contigs, checkIfExists:true)
+           .map({it -> tuple(it.baseName, it)})
            //.view()
            .set{assembly}
 
@@ -152,16 +165,9 @@ workflow snippy_fasta {
     SNIPPYFASTA.out // results
 }  
 
-
 //return
 
-workflow  snippy_core {
-    FASTP(reads)
-    SNIPPYFASTQ(FASTP.out.reads, refFasta)
-    SNIPPYCORE(SNIPPYFASTQ.out.combine(refFasta))        
-}
-
-workflow cdiff_mapping_snpCalling {
+workflow  snippy_core_tree {
        Channel.fromFilePairs(params.reads, checkIfExists: true)
            .map{it}
            //.view()
@@ -169,16 +175,33 @@ workflow cdiff_mapping_snpCalling {
        Channel.fromPath(params.ref, checkIfExists:true)
            //.view()       
            .set{refFasta}
-     main:
-     INDEXREFERENCE(refFasta)     
-     REFMASK(refFasta)
-     FASTP(reads)
-     BWA(FASTP.out.reads, refFasta)
-     REMOVE_DUPLICATES(BWA.out)
-     MPILEUP(REMOVE_DUPLICATES.out.dup_removed)
-     SNP_CALL(MPILEUP.out.pileup)
-     FILTER_SNPS(SNP_CALL.out.snps_called)
-     CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
+       FASTP(reads)
+       SNIPPYFASTQ(FASTP.out.reads.combine(refFasta))
+       SNIPPYCORE(SNIPPYFASTQ.out, refFasta)
+       GUBBINS(SNIPPYCORE.out.for_gubbins)
+       SNP_SITES(GUBBINS.out.polymorphsites) 
+       SNP_DISTS(SNP_SITES.out.nonrec)
+       PHYLOTREE(SNP_SITES.out)      
+}
+
+workflow cdiff_mapping_snpCalling_DE {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       Channel.fromPath(params.ref, checkIfExists:true)
+           //.view()       
+           .set{refFasta}
+       main:
+       INDEXREFERENCE(refFasta)     
+       //REFMASK(refFasta)
+       FASTP(reads)
+       BWA(FASTP.out.reads.combine(INDEXREFERENCE.out.bwa_fai))
+       REMOVE_DUPLICATES(BWA.out)
+       MPILEUP(REMOVE_DUPLICATES.out.dup_removed.combine(refFasta))
+       SNP_CALL(MPILEUP.out.pileup.combine(refFasta))
+       //FILTER_SNPS(SNP_CALL.out, REFMASK.out)
+       //CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
      
 }
 
@@ -188,14 +211,127 @@ workflow cdiff_asssembly_mlst_amr_plm {
            .map{it}
            //.view()
            .set{reads}
+       Channel.fromPath(params.ref, checkIfExists:true)
+           //.view()       
+           .set{refFasta}
        main:
        RAWFASTQC(reads)
        FASTP(reads)
        CLEANFASTQC(FASTP.out.reads)
        MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
        ASSEMBLY(FASTP.out.reads)
-       QUAST_FROM_READS(ASSEMBLY.out.assembly)
-       MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       //QUAST_FROM_READS(ASSEMBLY.out.assembly)
+       //MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       //CGMLST_READS_DE(ASSEMBLY.out.assembly)
        MLST_CDIFF_FROM_READS(ASSEMBLY.out.assembly)
        AMR_PLM_FROM_READS(ASSEMBLY.out.assembly)
+}
+
+workflow cgmlst_fasta {
+       Channel.fromPath(params.contigs, checkIfExists:true)
+           .map({it -> tuple(it.baseName, it)})
+           //.view()
+           .set{assembly}
+    main:
+    HCGMLST_CONTIGS_DE(assembly)
+}
+
+workflow cgmlst_reads {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       main:
+       FASTP(reads)
+       ASSEMBLY(FASTP.out.reads)
+       HCGMLST_READS_DE(ASSEMBLY.out.assembly)
+}
+
+workflow cdiff_hcgmlst_amrg_blastn {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       
+       main:
+       RAWFASTQC(reads)
+       FASTP(reads)
+       CLEANFASTQC(FASTP.out.reads)
+       //MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+       MULTIQC_READS(CLEANFASTQC.out.collect())
+       ASSEMBLY(FASTP.out.reads)
+       HCGMLST_CONTIGS_DE(ASSEMBLY.out.assembly)
+       CDIFF_AMRG_BLASTN_READS(ASSEMBLY.out.assembly)
+}
+
+workflow cdiff_hcgmlst_amrg_blastn_single {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       
+       main:
+       RAWFASTQC_SINGLE(reads)
+       FASTP(reads)
+       FASTP_SINGLE(reads)
+       CLEANFASTQC_SINGLE(FASTP_SINGLE.out.cat_fastq)
+       //MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+       //MULTIQC_READS(CLEANFASTQC.out.collect())
+       MULTIQC_READS(CLEANFASTQC_SINGLE.out.collect())
+       ASSEMBLY(FASTP.out.reads)
+       QUAST_FROM_READS(ASSEMBLY.out.assembly)
+       MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       HCGMLST_CONTIGS_DE(ASSEMBLY.out.assembly)
+       CDIFF_AMRG_BLASTN_READS(ASSEMBLY.out.assembly)
+       AMRFINDERPLUS_CDIFF(ASSEMBLY.out.assembly)
+       AMR_ABRFORMAT(ASSEMBLY.out.assembly)
+}
+
+workflow assembly_plmcharac_amr_ns {
+
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       
+       main:
+       RAWFASTQC(reads)
+       FASTP(reads)
+       FASTP_SINGLE(reads)
+       //CLEANFASTQC(FASTP.out.reads)
+       CLEANFASTQC_SINGLE(FASTP_SINGLE.out.cat_fastq)
+       //MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())
+       //MULTIQC_READS(CLEANFASTQC.out.collect())
+       MULTIQC_READS(CLEANFASTQC_SINGLE.out.collect())
+       ASSEMBLY(FASTP.out.reads)
+       QUAST_FROM_READS(ASSEMBLY.out.assembly)
+       MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       MLST_FROM_READS(ASSEMBLY.out.assembly)
+       AMR_PLM_FROM_READS(ASSEMBLY.out.assembly)
+       PLATON_READS(ASSEMBLY.out.assembly)
+       //MOBTYPER(ASSEMBLY.out.assembly)
+       
+}
+
+workflow rawqc {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           //.view()
+           .set{reads}
+       
+       main:
+       RAWFASTQC_SINGLE(reads)
+}
+
+workflow mlst_amr_chrom_plm_contigs_ns {
+    Channel.fromPath(params.contigs, checkIfExists:true)
+           .map({it -> tuple(it.baseName, it)})
+           //.view()
+           .set{assembly}
+
+    main:
+    MLST_FROM_CONTIGS(assembly)
+    AMR_PLM_FROM_CONTIGS(assembly)
+    PLATON_CONTIGS(assembly)
+    
 }

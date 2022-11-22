@@ -1,4 +1,4 @@
-# BUGflow DSL2
+# Bugflow DSL2
 A bacterial sequencing data processing pipeline
 
 ## Overview
@@ -105,7 +105,7 @@ nextflow run main_bugflow_dsl2.nf -entry shovill --reads "./example_data/*{1,2}.
 ```
 
 ---
-Arun Decano & David Eyre
+Arun Decano, Jeremy Swann & David Eyre
 
 arun_decano@ndm.ox.ac.uk
 david.eyre@bdi.ox.ac.uk 
