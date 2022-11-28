@@ -8,3 +8,4 @@ dependencies:
   - multiqc
   - snp-dists
   - snp-sites
+  - gubbins

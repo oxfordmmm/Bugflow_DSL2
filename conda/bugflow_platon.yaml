@@ -1,6 +1,7 @@
-name: snp-sites_env
+name: platon_env
 channels:
   - bioconda
+  - conda-forge
   - defaults
 dependencies:
-  - snp-sites
+  - platon

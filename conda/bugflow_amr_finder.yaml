@@ -1,6 +1,6 @@
-name: fastp_env
+name: perl_env
 channels:
   - bioconda
   - defaults
 dependencies:
-  - fastp
+  - ncbi-amrfinderplus

@@ -1,7 +1,6 @@
-name: mlst_env
+name: perl_env
 channels:
   - bioconda
-  - conda-forge
   - defaults
 dependencies:
-  - mlst=2.22.1
+  - mob_suite

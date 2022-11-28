@@ -1,6 +1,0 @@
-name: fasttree_env
-channels:
-  - bioconda
-  - defaults
-dependencies:
-  - fasttree

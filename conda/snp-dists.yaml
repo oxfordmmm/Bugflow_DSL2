@@ -1,6 +1,0 @@
-name: snp-dists_env
-channels:
-  - bioconda
-  - defaults
-dependencies:
-  - snp-dists

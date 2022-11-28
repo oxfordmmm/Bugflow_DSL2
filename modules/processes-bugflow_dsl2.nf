@@ -15,9 +15,7 @@ QC of raw reads
 */
 
 process RAWFASTQC {
-	cpus 4
-
-    label 'perl'
+    label 'fastqc'
     tag {"FastQC raw ${uuid} reads"}
 	
 	publishDir "$params.outdir/raw_fastqc", mode: 'copy'
@@ -38,9 +36,7 @@ process RAWFASTQC {
 }
 
 process RAWFASTQC_SINGLE {
-	cpus 4
-
-    conda './conda/fastqc.yaml'
+    label 'fastqc'
 	
     tag {"FastQC raw ${uuid} reads"}
 	
@@ -73,8 +69,6 @@ Read cleaning with Fastp
 */
 
 process FASTP {
-	cpus 8    
-
     label 'non_perl'
     tag {"filter $uuid reads"}
     publishDir "$params.outdir/clean_fastqs/", mode: "copy"
@@ -90,15 +84,11 @@ process FASTP {
     script:
     """
     fastp -i ${reads[0]} -I ${reads[1]} -o ${uuid}_clean_R1.fastq.gz -O ${uuid}_clean_R2.fastq.gz -w ${task.cpus} -j ${uuid}.fastp.json
-    
     """
 }
 
 process FASTP_SINGLE {
-    cpus 8
-
-    conda './conda/fastp.yaml'
-    
+    label 'non-perl'
 
     tag {"filter $uuid reads"}
     publishDir "$params.outdir/clean_fastqs/", mode: "copy"
@@ -113,10 +103,8 @@ process FASTP_SINGLE {
 
     script:
     """
-    
     fastp -i ${reads[0]} -I ${reads[1]} -o ${uuid}_clean_R1.fastq.gz -O ${uuid}_clean_R2.fastq.gz -w ${task.cpus} -j ${uuid}.fastp.json
     cat ${uuid}_clean_R*.fastq.gz > ${uuid}.fastq.gz
-
     """
 
 }
@@ -130,9 +118,7 @@ QC clean reads
 */
 
 process CLEANFASTQC {
-	cpus 4
-	
-    label 'perl'
+    label 'fastqc'
 	tag {"FastQC clean ${uuid} reads"}
 
     publishDir "$params.outdir/clean_fastqc", mode: 'copy', pattern: "${uuid}*"
@@ -147,16 +133,12 @@ process CLEANFASTQC {
 	script:
 	"""
     fastqc --threads ${task.cpus} ${reads}
-    
 	"""
 
 }
 
 process CLEANFASTQC_SINGLE {
-	cpus 4
-	
-    conda './conda/fastqc.yaml'
-	
+    label 'fastqc'
 	tag {"FastQC clean ${uuid} reads"}
 
     publishDir "$params.outdir/clean_fastqc_single", mode: 'copy', pattern: "${uuid}*"
@@ -185,7 +167,6 @@ Collate and summarize all read QC files
 */
 
 process MULTIQC_READS {
-
     label 'non_perl'
 	tag {"Collate and summarize QC files"}
 
@@ -212,24 +193,22 @@ De novo assembly
 */
 
 process ASSEMBLY {
-  	cpus 8
-
 	tag { "assemble ${uuid}" }
-    label 'perl'
+    label 'shovill'
 
-  	publishDir "$params.outdir/assemblies/", mode: "copy"
+    publishDir "$params.outdir/assemblies/", mode: "copy"
 
-  	input:
-  	tuple val(uuid), path(reads)
+    input:
+    tuple val(uuid), path(reads)
 
-  	output:
-  	tuple val(uuid), path("${uuid}_contigs.fa"), emit: assembly
+    output:
+    tuple val(uuid), path("${uuid}_contigs.fa"), emit: assembly
 
-  	script:
- 	"""
-  	shovill --R1 ${reads[0]} --R2 ${reads[1]} --outdir shovill_${uuid} --cpus ${task.cpus}
-	mv shovill_${uuid}/contigs.fa ${uuid}_contigs.fa
-  	"""
+    script:
+    """
+    shovill --R1 ${reads[0]} --R2 ${reads[1]} --outdir shovill_${uuid} --cpus ${task.cpus}
+    mv shovill_${uuid}/contigs.fa ${uuid}_contigs.fa
+    """
 }
 
 /*
@@ -242,7 +221,7 @@ process QUAST_FROM_READS  {
     
     tag { " QC assembly using Quast" }
     
-    label 'perl'
+    label 'quast'
     publishDir "$params.outdir/quast", mode: 'copy'
     
     input:
@@ -262,7 +241,7 @@ process QUAST_FROM_CONTIGS  {
     
     tag { "QC assembly using Quast" }
 
-    label 'perl'
+    label 'quast'
     publishDir "$params.outdir/quast", mode: 'copy'
     
     input:
@@ -280,7 +259,6 @@ process QUAST_FROM_CONTIGS  {
 process MULTIQC_CONTIGS {
 	
 	label 'non_perl'
-
 
 	tag {"Collate and summarize QC files"}
 
@@ -311,7 +289,7 @@ process AMR_PLM_FROM_READS {
     
     tag { "AMR finding with Abricate" }
 
-    label 'perl'
+    label 'abricate'
 
     publishDir "$params.outdir/amr_plasmid/", mode: 'copy'
     
@@ -343,13 +321,12 @@ process AMR_PLM_FROM_CONTIGS {
     
     tag { "AMR finding with Abricate" }
 
-    label 'perl'
+    label 'abricate'
 
     publishDir "$params.outdir/amr_plasmid/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
-    
     
     output:
     path("*")
@@ -372,17 +349,14 @@ Determine MLST
 */
 
 process MLST_FROM_READS {
-    cpus 4
-
     tag {"MLST: ${uuid}"}
 
-    label 'perl'
+    label 'mlst'
 
     publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
     tuple val(uuid), path(assembly)  
-    
     
     output:
     path("${uuid}_ST.tsv")
@@ -419,7 +393,7 @@ process MLST_FROM_CONTIGS {
 
     tag {"MLST: ${assembly}"}
 
-    label 'perl'
+    label 'mlst'
     publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
@@ -442,17 +416,14 @@ Read mapping and SNP calling from Illumina reads
 */
 
 process SNIPPYFASTQ {
-	cpus 4
-
 	tag { "call snps from FQs: ${uuid}" }
 
-    label 'perl'
-	    
+    label 'snippy'
+
 	publishDir "$params.outdir/snps/", mode: "copy"
 
     input:
     tuple val(uuid), path(reads), path(refFasta)
-    
 
     output:
 	path("${uuid}_snippy/*"), emit: snippy // whole output folder
@@ -471,11 +442,9 @@ Read mapping and SNP calling from assembled contigs
 */
 
 process SNIPPYFASTA {
-	cpus 4
-
 	tag { "call snps from contigs: ${uuid}" }
 
-    label 'perl'
+    label 'snippy'
         
 	publishDir "$params.outdir/snps/", mode: "copy"
 
@@ -501,7 +470,7 @@ process SNIPPYCORE {
     
     tag { "create snp alignments using snippy-core" }
 
-    label 'perl'
+    label 'snippy'
     publishDir "${params.outdir}/snippy_core", mode: "copy"
 
     input:
@@ -526,13 +495,10 @@ process SNIPPYCORE {
 }
 
 process GUBBINS {
-    cpus 16
-
+    label 'non_perl'
     tag { "remove recombinant segments with Gubbins" }
-
     
     publishDir "${params.outdir}/gubbins", mode: "copy"
-    
 
     input:
     path(for_gubbins)
@@ -544,7 +510,6 @@ process GUBBINS {
     script:
     """
     run_gubbins.py ${for_gubbins} --threads  $task.cpus --remove-identical-sequences --tree-builder fasttree 
-
     """
 }
 
@@ -555,10 +520,9 @@ Create a SNP-only (non-recombinant) alignment
 */
 
 process SNP_SITES {
-
     tag { "create a SNP-only, non-rec alignment" }
 
-    
+    label 'non_perl'
     publishDir "${params.outdir}/snp-sites", mode: "copy"
     
     input:
@@ -570,7 +534,6 @@ process SNP_SITES {
     script:
     """
     snp-sites -c ${polymorphsites} > core.full.nonrec.aln 
-
     """
     
 }
@@ -584,6 +547,7 @@ Create a pairwise SNP matrix
 process SNP_DISTS {
     tag { "create a pairwise SNP matrix" }
 
+    label 'non_perl'
     publishDir "${params.outdir}/snp-dists", mode: "copy"
 
     input:
@@ -600,7 +564,6 @@ process SNP_DISTS {
     snp-dists ${nonrec} > ${nonrec}.snp-dists.tsv
     snp-dists -c ${nonrec} > ${nonrec}.snp-dists.csv
     snp-dists -c ${nonrec} -m > ${nonrec}.snp-dists_molten.csv
-
     """
 }
 
@@ -614,7 +577,7 @@ process PHYLOTREE {
 
     tag { "generate a non-rec tree using FastTree" }
 
-    
+    label 'non_perl'
     publishDir "${params.outdir}/tree", mode: "copy"
     
     input:
@@ -638,6 +601,7 @@ Index Reference Genome
 
 process INDEXREFERENCE {
     tag {"index reference FASTA"}
+    label 'blast'
     
 	input:
     path (refFasta)
@@ -672,10 +636,8 @@ Mask Reference Genome
 */
 
 
-
 process REFMASK {
-
-	conda '/home/ubuntu/miniconda3/envs/blast_env'
+	label 'blast'
 
     input:
 	path(refFasta)	
@@ -687,7 +649,7 @@ process REFMASK {
 
 	script:
 	"""
-    /home/ubuntu/Bugflow_DSL2/bin/genRefMask.py -r ${refFasta} -m 200 -p 95
+    genRefMask.py -r ${refFasta} -m 200 -p 95
     bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}
 	echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
 	tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
@@ -701,9 +663,8 @@ Map reads to Reference genome using BWA
 */
 
 process BWA {
-	cpus 8
-	
     tag { "map clean ${uuid} reads to reference" }
+    label 'blast'
 
     publishDir "${params.outdir}/bwa", mode: "copy"
     
@@ -727,11 +688,8 @@ Remove duplicates using Samtools v.1.9
 */
 
 process REMOVE_DUPLICATES {
-    cpus 4
-
-    conda './conda/samtools.yaml'
-
-	tag "remove duplicates ${uuid}"
+    tag "remove duplicates ${uuid}"
+    label 'blast'
 	
 	publishDir "${params.outdir}/bwa", mode: "copy"
     
@@ -760,24 +718,21 @@ Run Samtools mpileup - creates BCF containing genotype likelihoods
 */
 
 process MPILEUP {
-
-    conda './conda/bcftools.yaml'
+    label 'blast'
 
     publishDir "${params.outdir}/pileup", mode: "copy"
 
     input:
     tuple val(uuid), path(bam), path(refFasta)
-    	
- 
+
     output:
     tuple val(uuid), path("${uuid}.pileup.bcf"), emit: pileup
-   
     
     //publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy'
 
 	//use bcftools mpileup to generate vcf file
 	//mpileup genearates the likelihood of each base at each site
- 	"""
+    """
     bcftools mpileup -Q25 -q30 -E -o40 -e20 -h100 -m2 -F0.002 -Ou -f ${refFasta} ${uuid}.bam > ${uuid}.pileup.bcf
     """
 
@@ -790,14 +745,11 @@ Call SNPs using Samtools call from mpileup file
 */
 
 process SNP_CALL {
-    
-    conda './conda/bcftools.yaml'
-    
+    label 'blast'
 
     input:
     tuple val(uuid), path(pileup), path(refFasta)
     
- 
     output:
     tuple val(uuid), path("${uuid}.bcf"), path("${uuid}.allsites.bcf"), emit: snps_called
     //path("${uuid}.bcf"), emit: bcf
@@ -817,7 +769,7 @@ process SNP_CALL {
     # 	-m use multiallelic model
     # 	-v output variants only
     bcftools call --prior 0.01 -Ou -m -v ${uuid}.pileup.bcf | bcftools norm -f ${refFasta} -m +any -Ou -o ${uuid}.bcf
-    	
+
     # call all sites
     bcftools call -Ou -m ${uuid}.pileup.bcf | bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.allsites.bcf
     """
@@ -831,8 +783,7 @@ Produce cleaner SNPs
 */
 
 process FILTER_SNPS {
-
-    conda './conda/bcftools.yaml'
+    label 'blast'
 
     publishDir "${params.outdir}/snps_called_vcf", mode: 'copy'
 
@@ -876,10 +827,10 @@ process FILTER_SNPS {
     #filter vcf
     bcftools filter -s Q30 -e '%QUAL<30' -Ou ${uuid}.masked.bcf.gz | 
         bcftools filter -s HetroZ -e "GT='het'" -m+ -Ou | 
-    	bcftools filter -s OneEachWay -e 'DP4[2] == 0 || DP4[3] ==0' -m+ -Ou | 
-    	bcftools filter -s RptRegion -e 'RPT=1' -m+ -Ou | 
-    	bcftools filter -s Consensus90 -e '((DP4[2]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3]))<=0.9' -m+ -Ou | 
-    	bcftools filter -s HQDepth5 -e '(DP4[2]+DP4[3])<=5' -m+ -Oz -o ${uuid}.all.vcf.gz
+        bcftools filter -s OneEachWay -e 'DP4[2] == 0 || DP4[3] ==0' -m+ -Ou | 
+        bcftools filter -s RptRegion -e 'RPT=1' -m+ -Ou | 
+        bcftools filter -s Consensus90 -e '((DP4[2]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3]))<=0.9' -m+ -Ou | 
+        bcftools filter -s HQDepth5 -e '(DP4[2]+DP4[3])<=5' -m+ -Oz -o ${uuid}.all.vcf.gz
     
     #create vcf file with just SNPs
     bcftools filter -i 'TYPE="snp"' -m+ -Oz -o ${uuid}.snps.vcf.gz ${uuid}.all.vcf.gz 
@@ -903,46 +854,42 @@ Generate a consensus FASTA file
 */
 
 process CONSENSUS_FA {
+    label 'blast'
 
-        conda './conda/samtools.yaml'
-        conda './conda/bcftools.yaml'
+    publishDir "${params.outdir}/consensus_fa", mode: 'copy'
 
-        publishDir "${params.outdir}/consensus_fa", mode: 'copy'
+    input:
+    tuple val(uuid), path(snps_vcf), path("${uuid}.snps.vcf.gz.csi"), 
+    path(zerocov_vcf), file("${uuid}.zero_coverage.vcf.gz.csi")
+    file(refFasta)
 
+    output:
+    path("tmp.bcf.gz")
+    path("tmp.fa")
+    path("${uuid}.consensus.fa")
 
-	    input:
-		tuple val(uuid), path(snps_vcf), path("${uuid}.snps.vcf.gz.csi"), 
-    	path(zerocov_vcf), file("${uuid}.zero_coverage.vcf.gz.csi")
-		file(refFasta)
-	
-	    output:
-		path("tmp.bcf.gz")
-        path("tmp.fa")
-        path("${uuid}.consensus.fa")
-	
-	    
-	    // call consensus sequence
-		// -S flag in bcftools filter sets GT (genotype) to missing, with -M flag here
-		// setting value to N
-	    """
-	    #create a temporary bcf file with genotype of filtered variants set to .
-	    bcftools filter -S . -e 'FILTER != "PASS"' -Ob -o tmp.bcf.gz ${uuid}.snps.vcf.gz
-	    bcftools index tmp.bcf.gz
-	
-	    #create consensus file with all the sites set to . above replaced as N
-	    cat $refFasta | bcftools consensus -H 1 -M "N" tmp.bcf.gz > tmp.fa
-	
-	    #set all the sites with zero coverage to be -
-	    samtools faidx tmp.fa 
-	    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.consensus.fa
-	    """
+    
+    // call consensus sequence
+    // -S flag in bcftools filter sets GT (genotype) to missing, with -M flag here
+    // setting value to N
+    """
+    #create a temporary bcf file with genotype of filtered variants set to .
+    bcftools filter -S . -e 'FILTER != "PASS"' -Ob -o tmp.bcf.gz ${uuid}.snps.vcf.gz
+    bcftools index tmp.bcf.gz
+
+    #create consensus file with all the sites set to . above replaced as N
+    cat $refFasta | bcftools consensus -H 1 -M "N" tmp.bcf.gz > tmp.fa
+
+    #set all the sites with zero coverage to be -
+    samtools faidx tmp.fa 
+    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.consensus.fa
+    """
 }
 
 
 process HCGMLST_READS_DE {
     tag { "cgMLST Profiling using Hash-cgMLST: ${uuid}" }
-
-    conda './conda/hash-cgmlst.yaml'
+    label 'blast'
 
     publishDir "${params.outdir}/cgmlst", mode: "copy"
 
@@ -958,15 +905,13 @@ process HCGMLST_READS_DE {
     script:
 
     """
-    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
+    getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
     """
 }
 
 process HCGMLST_CONTIGS_DE {
     tag { "cgMLST Profiling using Hash-cgMLST" }
-
-    
-    conda './conda/hash-cgmlst.yaml'
+    label 'blast'
 
     publishDir "${params.outdir}/cgmlst", mode: "copy"
 
@@ -983,16 +928,15 @@ process HCGMLST_CONTIGS_DE {
 
     """
     #python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${assembly} -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${assembly} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
-    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${uuid} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
-    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/compareProfiles.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons.txt
-    python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/compareProfilesExclude.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons_exclude26genes.txt
+    getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${uuid} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
+    compareProfiles.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons.txt
+    compareProfilesExclude.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons_exclude26genes.txt
     """
 }
 
 process CDIFF_AMRG_BLASTN_READS {
     tag { "annotate ${uuid} contigs with custom Cdiff AMRG db" }
-
-    conda './conda/blast.yaml'
+    label 'blast'
 
     publishDir "${params.outdir}/cdiff_blastn", mode: "copy"
 
@@ -1009,7 +953,6 @@ process CDIFF_AMRG_BLASTN_READS {
     makeblastdb -in /mnt/scratch/test_bugflow/input/Cdiff_AMR/Blastn/cdiffamr_full.fasta -parse_seqids  -title "C. diff AMRG db" -dbtype nucl -out cdiffamr
     blastn -query ${params.outdir}/assemblies/${uuid}_contigs.fa -db cdiffamr -out cdiffamr-${uuid}.tsv -perc_identity 95 -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
     echo -e "qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore" > cdiffamr-${uuid}_blastn.tsv && cat cdiffamr-${uuid}.tsv >> cdiffamr-${uuid}_blastn.tsv
-    
     """
     
 }
@@ -1017,8 +960,7 @@ process CDIFF_AMRG_BLASTN_READS {
 
 process SUMMARY_BLASTN {
     tag { "cat BLASTN results" }
-
-    conda './conda/blast.yaml'
+    label 'blast'
 
     publishDir "${params.outdir}/cdiff_blastn", mode: "copy"
 
@@ -1028,18 +970,15 @@ process SUMMARY_BLASTN {
     output:
     path("*")
     
-
     script:
     """
     cat ${blastn} > summary_AMRG_blastn_report.tsv
-    #python3 /home/ubuntu/Bugflow_DSL2/bin/tsv_to_html.py summary_AMRG_blastn_report.tsv summary_AMRG_blastn_report.html
     """
 }
 
 process AMR_ABRFORMAT {
     tag { "AMR finding using custom C. diff db" }
-    
-    conda './conda/abricate.yaml'
+    label 'abricate'
 
     publishDir "$params.outdir/amr_cdiff_abr/", mode: 'copy'
     
@@ -1050,7 +989,6 @@ process AMR_ABRFORMAT {
     output:
     path("*")
     
-
     script:
     """
     abricate  --db cdiffamr ${assembly} > ${uuid}_cdiffamr.tab
@@ -1060,8 +998,7 @@ process AMR_ABRFORMAT {
 
 process AMRFINDERPLUS_CDIFF {
     tag { "AMR finding using AMRFinderPlus" }
-    
-    conda './conda/ncbi-amrfinderplus.yaml'
+    label 'amr_finder'
 
     publishDir "$params.outdir/amr_cdiff_pointmuts/", mode: 'copy'
     
@@ -1081,12 +1018,8 @@ process AMRFINDERPLUS_CDIFF {
 
 
 process PLATON_READS {
-
-    cpus 8
-
     tag { "ID plasmids in short-read draft assemblies" }
-
-    conda './conda/platon.yaml'
+    label 'platon'
 
     publishDir "${params.outdir}/platon", mode: "copy"
 
@@ -1104,11 +1037,8 @@ process PLATON_READS {
 }
 
 process PLATON_CONTIGS {
-cpus 8
-
     tag { "ID plasmids in short-read draft assemblies" }
-
-    conda './conda/platon.yaml'
+    label 'platon'
 
     publishDir "${params.outdir}/platon", mode: "copy"
 
@@ -1127,8 +1057,7 @@ cpus 8
 
 process MOBTYPER {
     tag { "MOB-typer and MOB-recon: ${uuid}" }
-
-    conda './conda/mobsuite.yaml'
+    label 'mob_suite'
 
     publishDir "${params.outdir}/mobsuite", mode: "copy"
 

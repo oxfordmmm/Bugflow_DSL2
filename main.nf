@@ -310,7 +310,6 @@ workflow assembly_plmcharac_amr_ns {
        AMR_PLM_FROM_READS(ASSEMBLY.out.assembly)
        PLATON_READS(ASSEMBLY.out.assembly)
        //MOBTYPER(ASSEMBLY.out.assembly)
-       
 }
 
 workflow rawqc {
@@ -333,5 +332,4 @@ workflow mlst_amr_chrom_plm_contigs_ns {
     MLST_FROM_CONTIGS(assembly)
     AMR_PLM_FROM_CONTIGS(assembly)
     PLATON_CONTIGS(assembly)
-    
 }
