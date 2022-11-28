@@ -88,7 +88,7 @@ process FASTP {
 }
 
 process FASTP_SINGLE {
-    label 'non-perl'
+    label 'non_perl'
 
     tag {"filter $uuid reads"}
     publishDir "$params.outdir/clean_fastqs/", mode: "copy"
@@ -372,7 +372,7 @@ process MLST_CDIFF_FROM_READS {
 
     tag {"MLST: ${assembly}"}
 
-    label 'perl'
+    label 'mlst'
     publishDir "$params.outdir/mlst/", mode: 'copy'
     
     input:
