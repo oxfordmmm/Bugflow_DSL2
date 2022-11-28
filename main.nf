@@ -211,9 +211,9 @@ workflow cdiff_asssembly_mlst_amr_plm {
            .map{it}
            //.view()
            .set{reads}
-       Channel.fromPath(params.ref, checkIfExists:true)
+       //Channel.fromPath(params.ref, checkIfExists:true)
            //.view()       
-           .set{refFasta}
+           //.set{refFasta}
        main:
        RAWFASTQC(reads)
        FASTP(reads)
