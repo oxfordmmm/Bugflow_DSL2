@@ -1011,6 +1011,7 @@ process AMRFINDERPLUS_CDIFF {
 
     script:
     """
+    amrfinder -u
     amrfinder --organism Clostridioides_difficile -n ${assembly} > ${uuid}_forpointmuts.tsv
     """
 
