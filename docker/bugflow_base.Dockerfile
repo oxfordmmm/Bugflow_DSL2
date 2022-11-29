@@ -9,7 +9,7 @@ LABEL maintainer="David Eyre <david.eyre@bdi.ox.ac.uk>"
 RUN apt-get clean all && \
  apt-get update && \
  apt-get upgrade -y && \
- apt-get install -y file && \
+ apt-get install -y file unzip && \
  apt-get clean && \
  apt-get purge && \
  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

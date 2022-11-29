@@ -949,7 +949,7 @@ process CDIFF_AMRG_BLASTN_READS {
     script:
 
     """
-    makeblastdb -in /mnt/scratch/test_bugflow/input/Cdiff_AMR/Blastn/cdiffamr_full.fasta -parse_seqids  -title "C. diff AMRG db" -dbtype nucl -out cdiffamr
+    makeblastdb -in ${params.cdiff_amr_fasta} -parse_seqids  -title "C. diff AMRG db" -dbtype nucl -out cdiffamr
     blastn -query ${params.outdir}/assemblies/${uuid}_contigs.fa -db cdiffamr -out cdiffamr-${uuid}.tsv -perc_identity 95 -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
     echo -e "qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore" > cdiffamr-${uuid}_blastn.tsv && cat cdiffamr-${uuid}.tsv >> cdiffamr-${uuid}_blastn.tsv
     """
@@ -1010,7 +1010,7 @@ process AMRFINDERPLUS_CDIFF {
 
     script:
     """
-    amrfinder --organism Clostridioides_difficile -d /mnt/scratch/miniconda3/envs/amrfinderplus_env/share/amrfinderplus/data/2022-10-11.2/ -n ${assembly} > ${uuid}_forpointmuts.tsv
+    amrfinder --organism Clostridioides_difficile -n ${assembly} > ${uuid}_forpointmuts.tsv
     """
 
 }
