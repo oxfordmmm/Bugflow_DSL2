@@ -905,7 +905,7 @@ process HCGMLST_READS_DE {
     script:
 
     """
-    getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
+    getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s ${params.ridom_scheme_path}/files -d ${params.ridom_scheme_path}/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${uuid} 
     """
 }
 
@@ -927,8 +927,7 @@ process HCGMLST_CONTIGS_DE {
     script:
 
     """
-    #python3 /home/ubuntu/Rev_Bugflow/hash-cgmlst/bin/getCoreGenomeMLST.py -f  ${assembly} -n ${assembly} -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${params.outdir}/cgmlst/${assembly} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
-    getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/files -d /home/ubuntu/Rev_Bugflow/hash-cgmlst/ridom_scheme/ridom_scheme.fasta -o ${uuid} -b /mnt/scratch/miniconda3/envs/hash-cgmlst_env/bin/blastn 
+    getCoreGenomeMLST.py -f ${assembly} -n ${uuid}_hash-cgmlst -s ${params.ridom_scheme_path}/files -d ${params.ridom_scheme_path}/ridom_scheme.fasta -o ${uuid} 
     compareProfiles.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons.txt
     compareProfilesExclude.py -i ${params.outdir}/cgmlst/ -o hash-cgmlst_profile_comparisons_exclude26genes.txt
     """

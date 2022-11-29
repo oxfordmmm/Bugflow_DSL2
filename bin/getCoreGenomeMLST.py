@@ -48,11 +48,10 @@ class CgMLST:
 			except:
 				raise RuntimeError('Missing blast database for: %s'%self.contigsPath)
 		
-	def runBlast(self, blastn_path):
+	def runBlast(self):
 		## Set up the query and execute it - use settings from Mellman paper, but set evalue to 0.01 and 
 		# only return one target sequence
-		cline = NcbiblastnCommandline( cmd = blastn_path,
-									   query=self.schemeDB, db=self.contigsPath, 
+		cline = NcbiblastnCommandline( query=self.schemeDB, db=self.contigsPath, 
 									   evalue=0.01, outfmt=5, max_target_seqs=1, perc_identity=90,
 									   word_size=11, penalty=-1, reward=1, gapopen=5,gapextend=2)
 		if self.verbose:
@@ -152,7 +151,6 @@ if __name__ == "__main__":
 	parser.add_option( '-s', '--scheme', action = 'store', type='string', dest = 'schemePath', default = '.' )
 	parser.add_option( '-d', '--db', action = 'store', type='string', dest = 'schemeDB', default = '.' )
 	parser.add_option( '-o', '--output', action = 'store', type='string', dest = 'output', default = '.' )
-	parser.add_option( '-b', '--blastn', action = 'store', type='string', dest = 'blastn_path', default = '.' )
 	
 	opts, args = parser.parse_args()
 	contigsFa = opts.contigsFa
@@ -171,7 +169,7 @@ if __name__ == "__main__":
 	jsonFile = '%s_cgmlst.json'%output
 	profileFile = '%s_cgmlst.profile'%output
 	sample = CgMLST(contigsFa, contigName, schemeDB, schemePath)
-	sample.runBlast(blastn_path)
+	sample.runBlast()
 	sample.writeFa(cgmlstFa)
 	missing = sample.writeHash(jsonFile)
 	sample.writeProfile(profileFile)

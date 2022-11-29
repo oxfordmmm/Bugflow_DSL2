@@ -284,7 +284,7 @@ workflow cdiff_hcgmlst_amrg_blastn_single {
        HCGMLST_CONTIGS_DE(ASSEMBLY.out.assembly)
        CDIFF_AMRG_BLASTN_READS(ASSEMBLY.out.assembly)
        AMRFINDERPLUS_CDIFF(ASSEMBLY.out.assembly)
-       AMR_ABRFORMAT(ASSEMBLY.out.assembly)
+       //AMR_ABRFORMAT(ASSEMBLY.out.assembly)
 }
 
 workflow assembly_plmcharac_amr_ns {

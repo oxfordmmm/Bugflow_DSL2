@@ -11,3 +11,8 @@ RUN mamba install -y \
   samtools \
   blast \
   bcftools
+
+RUN git clone https://github.com/davideyre/hash-cgmlst.git && \
+    mkdir /bugflow_data && \
+    mv /hash-cgmlst/ridom_scheme /bugflow_data && \
+    rm -rf /hash-cgmlst
