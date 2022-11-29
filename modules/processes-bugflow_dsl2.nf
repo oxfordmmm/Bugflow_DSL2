@@ -941,6 +941,7 @@ process CDIFF_AMRG_BLASTN_READS {
 
     input:
     tuple val(uuid), path(reads)
+    path(cdiff_amr_fasta)
 
     output:
     path("*")
@@ -949,7 +950,7 @@ process CDIFF_AMRG_BLASTN_READS {
     script:
 
     """
-    makeblastdb -in ${params.cdiff_amr_fasta} -parse_seqids  -title "C. diff AMRG db" -dbtype nucl -out cdiffamr
+    makeblastdb -in ${cdiff_amr_fasta} -parse_seqids  -title "C. diff AMRG db" -dbtype nucl -out cdiffamr
     blastn -query ${params.outdir}/assemblies/${uuid}_contigs.fa -db cdiffamr -out cdiffamr-${uuid}.tsv -perc_identity 95 -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
     echo -e "qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore" > cdiffamr-${uuid}_blastn.tsv && cat cdiffamr-${uuid}.tsv >> cdiffamr-${uuid}_blastn.tsv
     """
