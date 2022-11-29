@@ -158,7 +158,6 @@ if __name__ == "__main__":
 	schemePath = opts.schemePath
 	schemeDB = opts.schemeDB
 	output = opts.output
-	blastn_path = opts.blastn_path
 
 	#example
 	# cd /users/bag/deyre/analysis/spades-flow/
