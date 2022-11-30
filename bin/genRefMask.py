@@ -119,4 +119,3 @@ if __name__ == '__main__':
 	#run blast repeat finder
 	run_blast(refpath, perc_identity, min_length)
 
-

@@ -1,0 +1,10 @@
+.nextflow*
+work/
+nextflow_reports/
+example_output/*
+private.md
+example_data/*.gz
+singularity/bug-flow.img
+
+conda/*
+!conda/*.yaml
