@@ -10,7 +10,8 @@ RUN mamba install -y \
   bwa \
   samtools \
   blast \
-  bcftools
+  bcftools \
+  biopython
 
 RUN git clone https://github.com/davideyre/hash-cgmlst.git && \
     mkdir /bugflow_data && \
