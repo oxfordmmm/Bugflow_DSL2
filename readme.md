@@ -50,13 +50,13 @@ git clone https://https://github.com/aedecano/bug-flow_DSL2.git
 Get the docker image
 This can be pulled from docker hub
 ```
-docker pull davideyre/bug-flow
+docker pull 
 ```
 
 Alternatively the docker image can be built from the Dockerfile. Within the cloned repository:
 ```
 cd docker
-docker build -t davideyre/bug-flow .
+docker build -t .
 ```
 Note the tag has to match in the `nextflow.config` file.
 
@@ -109,5 +109,6 @@ Arun Decano, Jeremy Swann & David Eyre
 
 arun_decano@ndm.ox.ac.uk
 david.eyre@bdi.ox.ac.uk 
+crookcs.it@ndm.ox.ac.uk
 
 October 2022
