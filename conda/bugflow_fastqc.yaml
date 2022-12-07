@@ -1,0 +1,6 @@
+name: fastqc_env
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - fastqc

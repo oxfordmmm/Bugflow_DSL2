@@ -78,7 +78,6 @@ Workflows
 #==============================================
 */
 
-
 workflow cdiff_mapping_snpCalling_DE {
        Channel.fromFilePairs(params.reads, checkIfExists: true)
            .map{it}
@@ -97,6 +96,8 @@ workflow cdiff_mapping_snpCalling_DE {
        SNP_CALL(MPILEUP.out.pileup.combine(refFasta))
        //FILTER_SNPS(SNP_CALL.out, REFMASK.out)
        //CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
+}
+
 
 
 workflow cdiff_asssembly_mlst_amr_plm {
@@ -104,9 +105,9 @@ workflow cdiff_asssembly_mlst_amr_plm {
            .map{it}
            //.view()
            .set{reads}
-       Channel.fromPath(params.ref, checkIfExists:true)
+       //Channel.fromPath(params.ref, checkIfExists:true)
            //.view()       
-           .set{refFasta}
+           //.set{refFasta}
        main:
        RAWFASTQC(reads)
        FASTP(reads)
@@ -177,4 +178,5 @@ workflow cdiff_hcgmlst_amrg_blastn_single {
        HCGMLST_CONTIGS_DE(ASSEMBLY.out.assembly)
        CDIFF_AMRG_BLASTN_READS(ASSEMBLY.out.assembly)
        AMRFINDERPLUS_CDIFF(ASSEMBLY.out.assembly)
+       //AMR_ABRFORMAT(ASSEMBLY.out.assembly)
 }

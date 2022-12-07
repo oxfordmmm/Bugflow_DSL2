@@ -1,0 +1,6 @@
+name: snippy_env
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - snippy

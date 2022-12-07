@@ -1,0 +1,6 @@
+name: shovill_env
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - shovill

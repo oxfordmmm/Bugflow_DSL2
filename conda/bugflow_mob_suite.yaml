@@ -1,0 +1,6 @@
+name: perl_env
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - mob_suite
