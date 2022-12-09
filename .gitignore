@@ -8,3 +8,4 @@ singularity/bug-flow.img
 
 conda/*
 !conda/*.yaml
+data/ridom_scheme
