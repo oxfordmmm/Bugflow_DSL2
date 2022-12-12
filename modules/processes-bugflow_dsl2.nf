@@ -368,7 +368,6 @@ process MLST_FROM_READS {
 }
 
 process MLST_CDIFF_FROM_READS {
-    cpus 4
 
     tag {"MLST: ${assembly}"}
 
@@ -389,7 +388,6 @@ process MLST_CDIFF_FROM_READS {
 }
 
 process MLST_FROM_CONTIGS {
-    cpus 4
 
     tag {"MLST: ${assembly}"}
 
