@@ -24,7 +24,7 @@ process RAWFASTQC {
     tuple val(uuid), path(reads) 
 	
 	output:
-	path("*")
+	path ("${uuid}_fastqc/${uuid}.txt")
 	
 	script:
 	
@@ -47,8 +47,7 @@ process RAWFASTQC_SINGLE {
     
 	
 	output:
-    path("${uuid}_raw_reads.fastq.gz"), emit: cat_raw
-	path("*")
+    path ("${uuid}_fastqc/${uuid}.txt")
 	
 	script:
 	
@@ -71,7 +70,6 @@ Read cleaning with Fastp
 process FASTP {
     label 'non_perl'
     tag {"filter $uuid reads"}
-    publishDir "$params.outdir/clean_fastqs/", mode: "copy"
 
     input:
     tuple val(uuid), path(reads) 
@@ -80,7 +78,6 @@ process FASTP {
     tuple val(uuid), path("${uuid}_clean_R*.fastq.gz"), emit: reads
     path("${uuid}.fastp.json"), emit: json
     
-
     script:
     """
     fastp -i ${reads[0]} -I ${reads[1]} -o ${uuid}_clean_R1.fastq.gz -O ${uuid}_clean_R2.fastq.gz -w ${task.cpus} -j ${uuid}.fastp.json
@@ -91,7 +88,6 @@ process FASTP_SINGLE {
     label 'non_perl'
 
     tag {"filter $uuid reads"}
-    publishDir "$params.outdir/clean_fastqs/", mode: "copy"
 
     input:
     tuple val(uuid), path(reads) 
@@ -121,15 +117,14 @@ process CLEANFASTQC {
     label 'fastqc'
 	tag {"FastQC clean ${uuid} reads"}
 
-    publishDir "$params.outdir/clean_fastqc", mode: 'copy', pattern: "${uuid}*"
+    publishDir "$params.outdir/clean_fastqc", mode: 'copy'
 
 	input:
     tuple val(uuid), path(reads)
 	
 	output:
-	path ("*")
+	path ("${uuid}_fastqc/${uuid}.txt")
     
-	
 	script:
 	"""
     fastqc --threads ${task.cpus} ${reads}
@@ -141,13 +136,13 @@ process CLEANFASTQC_SINGLE {
     label 'fastqc'
 	tag {"FastQC clean ${uuid} reads"}
 
-    publishDir "$params.outdir/clean_fastqc_single", mode: 'copy', pattern: "${uuid}*"
+    publishDir "$params.outdir/clean_fastqc_single", mode: 'copy'
 
 	input:
     tuple val(uuid), path(cat_fastq)
     
 	output:
-	path ("*")
+	path ("${uuid}_fastqc/${uuid}.txt")
     
 	script:
 	"""
@@ -228,7 +223,7 @@ process QUAST_FROM_READS  {
     tuple val(uuid), path(assembly)  
     
     output:
-    path("quast_${uuid}")
+    path("quast_${uuid}/${uuid}_Quastreport.tsv")
 
     script:
     """
@@ -261,8 +256,6 @@ process MULTIQC_CONTIGS {
 	label 'non_perl'
 
 	tag {"Collate and summarize QC files"}
-
-	publishDir "$params.outdir/multiqc_contigs/", mode: "copy"
 
 	input:
     path ('*')
@@ -368,7 +361,6 @@ process MLST_FROM_READS {
 }
 
 process MLST_CDIFF_FROM_READS {
-    cpus 4
 
     tag {"MLST: ${assembly}"}
 
@@ -389,7 +381,6 @@ process MLST_CDIFF_FROM_READS {
 }
 
 process MLST_FROM_CONTIGS {
-    cpus 4
 
     tag {"MLST: ${assembly}"}
 
@@ -919,10 +910,10 @@ process HCGMLST_CONTIGS_DE {
     tuple val(uuid), path(assembly)
 
     output:
-    path("*")
-    //path("${assembly}_cgmlst.json"), emit: cgmlst_json
-    //path("${assembly}_cgmlst.fa"), emit: cgmlst_fasta
-    //path("${assembly}_cgmlst.profile"), emit: cgmlst_profile
+    //path("*")
+    path("${uuid}_cgmlst.json"), emit: cgmlst_json
+    path("${uuid}_cgmlst.fa"), emit: cgmlst_fasta
+    path("${uuid}_cgmlst.profile"), emit: cgmlst_profile
 
     script:
 
@@ -937,14 +928,13 @@ process CDIFF_AMRG_BLASTN_READS {
     tag { "annotate ${uuid} contigs with custom Cdiff AMRG db" }
     label 'blast'
 
-    publishDir "${params.outdir}/cdiff_blastn", mode: "copy"
+    publishDir "${params.outdir}/cdiff_blastn/cdiffamr-*_blastn.tsv", mode: "copy"
 
     input:
     tuple val(uuid), path(reads)
     path(cdiff_amr_fasta)
 
     output:
-    path("*")
     path("cdiffamr-*_blastn.tsv"), emit: blastn
 
     script:
