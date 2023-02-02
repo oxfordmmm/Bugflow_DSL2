@@ -47,7 +47,7 @@ process RAWFASTQC_SINGLE {
     
 	
 	output:
-    path ("${uuid}_fastqc/${uuid}.txt")
+    path ("${uuid}_raw_reads_fastqc/${uuid}.txt")
 	
 	script:
 	
@@ -82,6 +82,11 @@ process FASTP {
     """
     fastp -i ${reads[0]} -I ${reads[1]} -o ${uuid}_clean_R1.fastq.gz -O ${uuid}_clean_R2.fastq.gz -w ${task.cpus} -j ${uuid}.fastp.json
     """
+
+    stub:
+    """
+    touch ${uuid}.fastp.json ${uuid}_clean_R1.fastq.gz ${uuid}_clean_R2.fastq.gz fastp.html
+    """
 }
 
 process FASTP_SINGLE {
@@ -103,6 +108,10 @@ process FASTP_SINGLE {
     cat ${uuid}_clean_R*.fastq.gz > ${uuid}.fastq.gz
     """
 
+    stub:
+    """
+    touch ${uuid}.fastp.json  ${uuid}.fastq.gz ${uuid}_clean_R1.fastq.gz ${uuid}_clean_R2.fastq.gz fastp.html
+    """
 }
 
 //return
@@ -117,13 +126,13 @@ process CLEANFASTQC {
     label 'fastqc'
 	tag {"FastQC clean ${uuid} reads"}
 
-    publishDir "$params.outdir/clean_fastqc", mode: 'copy'
+    publishDir "$params.outdir/clean_fastqc", mode: 'copy', pattern: "**.txt"
 
 	input:
     tuple val(uuid), path(reads)
 	
 	output:
-	path ("${uuid}_fastqc/${uuid}.txt")
+	path ("*")
     
 	script:
 	"""
@@ -136,20 +145,28 @@ process CLEANFASTQC_SINGLE {
     label 'fastqc'
 	tag {"FastQC clean ${uuid} reads"}
 
-    publishDir "$params.outdir/clean_fastqc_single", mode: 'copy'
+    publishDir "$params.outdir/clean_fastqc_single", mode: 'copy', pattern: '*.txt'
 
 	input:
     tuple val(uuid), path(cat_fastq)
     
 	output:
-	path ("${uuid}_fastqc/${uuid}.txt")
+	path ("*")
     
 	script:
 	"""
     fastqc --threads ${task.cpus} ${cat_fastq}
     unzip ${uuid}_fastqc.zip
-    cp ${uuid}_fastqc/fastqc_data.txt ${uuid}_fastqc/${uuid}.txt
+    cp ${uuid}_fastqc/fastqc_data.txt ${uuid}.txt
 	"""
+
+    stub:
+    """
+    touch ${uuid}_fastqc.html ${uuid}_fastqc.zip
+    mkdir ${uuid}_fastqc
+    touch ${uuid}_fastqc/fastqc.fo ${uuid}_fastqc/fastqc_data.txt ${uuid}_fastqc/fastqc_report.html \
+        ${uuid}_fastqc/summary.txt ${uuid}.txt
+    """
 
 }
 
@@ -175,9 +192,16 @@ process MULTIQC_READS {
     path ("*_data")
 
     script:
-
     """
     multiqc . 
+    """
+
+    stub:
+    """
+    touch multiqc_report.html
+    mkdir multiqc_data
+    touch multiqc_data/multiqc.log multiqc_data/multiqc_citations.txt multiqc_data/multiqc_data.json \
+        multiqc_data/multiqc_fastqc.txt multiqc_data/multiqc_general_stats.txt multiqc_data/multiqc_sources.txt
     """
 }
 
@@ -204,6 +228,11 @@ process ASSEMBLY {
     shovill --R1 ${reads[0]} --R2 ${reads[1]} --outdir shovill_${uuid} --cpus ${task.cpus}
     mv shovill_${uuid}/contigs.fa ${uuid}_contigs.fa
     """
+
+    stub:
+    """
+    touch ${uuid}_contigs.fa
+    """
 }
 
 /*
@@ -212,23 +241,32 @@ QC assembled genomes
 #==============================================
 */
 
-process QUAST_FROM_READS  {
+process QUAST_FROM_READS {
     
     tag { " QC assembly using Quast" }
     
     label 'quast'
-    publishDir "$params.outdir/quast", mode: 'copy'
+    publishDir "$params.outdir/quast", mode: 'copy', pattern: "*.tsv"
     
     input:
     tuple val(uuid), path(assembly)  
     
     output:
-    path("quast_${uuid}/${uuid}_Quastreport.tsv")
+    path("quast_${uuid}"), emit: quast_dir
+    path("*.tsv")
 
     script:
     """
     quast.py  ${assembly} -o quast_${uuid}
-    cp quast_${uuid}/report.tsv quast_${uuid}/${uuid}_Quastreport.tsv
+    cp quast_${uuid}/report.tsv ${uuid}_Quastreport.tsv
+    """
+
+    stub:
+    """
+    mkdir quast_${uuid}
+    touch quast_${uuid}/report.tsv ${uuid}_Quastreport.tsv quast_${uuid}/quast.log quast_${uuid}/report.html \
+        quast_${uuid}/report.pdf quast_${uuid}/report.tex quast_${uuid}/report.tsv quast_${uuid}/report.txt \
+        quast_${uuid}/transposed_report.tex quast_${uuid}/transposed_report.tsv quast_${uuid}/transposed_report.txt
     """
 }
 
@@ -268,6 +306,14 @@ process MULTIQC_CONTIGS {
 
     """
     multiqc . 
+    """
+
+    stub:
+    """
+    touch multiqc_report.html
+    mkdir multiqc_data
+    touch multiqc_data/multiqc.log multiqc_data/multiqc_citations.txt multiqc_data/multiqc_data.json \
+        multiqc_data/multiqc_fastqc.txt multiqc_data/multiqc_general_stats.txt multiqc_data/multiqc_sources.txt
     """
 }
 
@@ -928,7 +974,7 @@ process CDIFF_AMRG_BLASTN_READS {
     tag { "annotate ${uuid} contigs with custom Cdiff AMRG db" }
     label 'blast'
 
-    publishDir "${params.outdir}/cdiff_blastn/cdiffamr-*_blastn.tsv", mode: "copy"
+    publishDir "${params.outdir}/cdiff_blastn/", mode: "copy"
 
     input:
     tuple val(uuid), path(reads)

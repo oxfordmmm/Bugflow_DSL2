@@ -174,7 +174,7 @@ workflow cdiff_hcgmlst_amrg_blastn_single {
        MULTIQC_READS(CLEANFASTQC_SINGLE.out.collect())
        ASSEMBLY(FASTP.out.reads)
        QUAST_FROM_READS(ASSEMBLY.out.assembly)
-       MULTIQC_CONTIGS(QUAST_FROM_READS.out.collect())
+       MULTIQC_CONTIGS(QUAST_FROM_READS.out.quast_dir.collect())
        MLST_CDIFF_FROM_READS(ASSEMBLY.out.assembly)
        HCGMLST_CONTIGS_DE(ASSEMBLY.out.assembly)
        CDIFF_AMRG_BLASTN_READS(ASSEMBLY.out.assembly, params.cdiff_amr_fasta)
