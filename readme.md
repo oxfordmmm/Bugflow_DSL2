@@ -44,7 +44,7 @@ conda activate bug-flow_DSL2
 
 Clone the repository locally
 ```
-git clone https://https://github.com/aedecano/bug-flow_DSL2.git
+git clone https://github.com/aedecano/Bugflow_DSL2
 ```
 
 Get the docker image
