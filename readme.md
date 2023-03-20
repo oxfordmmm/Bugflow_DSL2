@@ -2,7 +2,7 @@
 A bacterial sequencing data processing pipeline
 
 ## Overview
-DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling and de novo assembly of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
+DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling, de novo assembly and genome annotation of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
 
 
 The pipeline uses these tools:
@@ -14,13 +14,15 @@ QC
  - Quast v.5.0.2
 
 Mapping and Variant calling
- - Snippy v.4.6
+ - BWA mem and bcftools 
+ - Snippy v4.6
  
 Assembly
  - Shovill v.1.1.0 (spades and pilon) 
 
-AMRG Annotation
- - Abricate v.0.8
+Annotation: AMRG and Point mutations
+ - Abricate v0.8
+ - AMRFinderPlusS
 
 ## Installation
 Requires a local installation of 
@@ -29,7 +31,7 @@ Requires a local installation of
 * Nextflow - https://www.nextflow.io
 * Miniconda - Miniconda3-py37_4.12.0-Linux-x86_64.sh
 
-Tools from bug-flow DSL2 are available from Bioconda.
+Tools from Bugflow DSL2 are available from Bioconda.
 
 Install Miniconda locally first,
 ```
