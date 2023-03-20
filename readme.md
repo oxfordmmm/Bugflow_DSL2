@@ -2,16 +2,16 @@
 A bacterial sequencing data processing pipeline
 
 ## Overview
-DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling, de novo assembly and genome annotation of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
+DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling, de novo assembly and genome annotation (AMRG, point mutations and cgMLST profile (C. difficile only)) of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
 
 
 The pipeline uses these tools:
 
 QC
- - Fastp v.0.23.2
- - FastQC v.0.11.9
- - MultiQC v.1.12
- - Quast v.5.0.2
+ - Fastp v0.23.2
+ - FastQC v0.11.9
+ - MultiQC v1.12
+ - Quast v5.0.2
 
 Mapping and Variant calling
  - BWA mem and bcftools 
@@ -40,8 +40,8 @@ bash Miniconda3-py37_4.12.0-Linux-x86_64.sh
 ```
 then create the bug-flow_DSL2 conda environment with all the software needed for running the pipeline.
 ```
-conda create -n bug-flow_DSL2 -c bioconda fastqc fastp multiqc shovill quast abricate snippy
-conda activate bug-flow_DSL2
+conda create -n Bugflow_DSL2 -c bioconda fastqc fastp multiqc shovill quast mlst abricate snippy samtools bwa bcftools
+conda activate Bugflow_DSL2
 ```
 
 Clone the repository locally
@@ -64,7 +64,7 @@ Note the tag has to match in the `nextflow.config` file.
 
 ## Running the the pipeline
 
-Bug-flow DSL2 has subworkflows for screening and de novo assembly of short reads and accurately calling variants.
+Bugflow DSL2 has subworkflows for screening and de novo assembly of short reads and accurately calling variants.
 
 To clean and de novo assemble raw Illumina reads:
 
@@ -72,10 +72,10 @@ To clean and de novo assemble raw Illumina reads:
 nextflow run main_bugflow_dsl2.nf -entry shovill --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]"
 ```
 
-To call high-quality SNPs from clean reads:
+To call high-quality SNPs from clean reads (customized for C. difficile isolates:):
 
 ```
-nextflow run main_bugflow_dsl2.nf -entry snippy_fastq --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
+nextflow run main_bugflow_dsl2.nf -entry cdiff_mapping_snpCalling_DE --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
 ```
 
 To call high-quality SNPs from assembled genomes (contigs):
