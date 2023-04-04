@@ -4,16 +4,22 @@
 DSL2 version of Bugflow: A pipeline for mapping followed by variant calling and de novo assembly of Illumina short read libraries
 
 QC
- - Fastp
- - FastQC
- - MultiQC
- - Quast
+ - Fastp v0.23.2
+ - FastQC v0.11.9
+ - MultiQC v1.12
+ - Quast v5.0.2
 
 Mapping and Variant calling
- - Snippy
+ - BWA mem and bcftools
+ - Snippy v4.6
  
 Assembly
- - Shovill (spades) 
+ - Shovill v1.1.0 (spades and pilon)
+
+AMRG Annotation
+ - Abricate v0.8
+ - AMRFinderPlus v3.11.2
+ - BLASTN vs C. difficile curated AMR database (also contains C. diff toxin genes)
 */
 
 /*
@@ -85,17 +91,21 @@ workflow cdiff_mapping_snpCalling_DE {
            .set{reads}
        Channel.fromPath(params.ref, checkIfExists:true)
            //.view()       
+           .first()
            .set{refFasta}
        main:
-       //INDEXREFERENCE(refFasta)     
-       //REFMASK(refFasta)
+       INDEXREFERENCE(refFasta)     
+       REFMASK(refFasta)
        FASTP(reads)
-       //BWA(FASTP.out.reads.combine(INDEXREFERENCE.out.bwa_fai))
-       //REMOVE_DUPLICATES(BWA.out)
-       //MPILEUP(REMOVE_DUPLICATES.out.dup_removed.combine(refFasta))
-       //SNP_CALL(MPILEUP.out.pileup.combine(refFasta))
-       //FILTER_SNPS(SNP_CALL.out, REFMASK.out)
-       //CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
+       BWA(FASTP.out.reads.combine(refFasta))
+       REMOVE_DUPLICATES(BWA.out)
+       MPILEUP(REMOVE_DUPLICATES.out.dup_removed.combine(refFasta))
+       SNP_CALL(MPILEUP.out.pileup.combine(refFasta))
+       FILTER_SNPS(SNP_CALL.out.snps_called, refFasta, REFMASK.out.masked_ref, REFMASK.out.masked_ref_hdr)
+       //FILTER_SNPS.out.filtered_snps.view()
+       CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
+       //MSA(CONSENSUS_FA.out.collect())
+       
 }
 
 

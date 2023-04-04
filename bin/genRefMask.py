@@ -39,7 +39,7 @@ def run_blast(refpath, perc_identity, min_length):
 	for contig_count, contig in enumerate(SeqIO.parse(refpath, 'fasta'), 1):
 		
 		total_bp += len(contig)
-		repmask = np.zeros(len(contig), dtype=np.bool)
+		repmask = np.zeros(len(contig), dtype=bool)
 		
 		try:
 			fields = blast_stream.readline().split()
@@ -118,4 +118,5 @@ if __name__ == '__main__':
 	
 	#run blast repeat finder
 	run_blast(refpath, perc_identity, min_length)
+
 
