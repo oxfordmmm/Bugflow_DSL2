@@ -97,7 +97,7 @@ workflow cdiff_mapping_snpCalling_DE {
        INDEXREFERENCE(refFasta)     
        REFMASK(refFasta)
        FASTP(reads)
-       BWA(FASTP.out.reads.combine(refFasta))
+       BWA(FASTP.out.reads.combine(refFasta), INDEXREFERENCE.out)
        REMOVE_DUPLICATES(BWA.out)
        MPILEUP(REMOVE_DUPLICATES.out.dup_removed.combine(refFasta))
        SNP_CALL(MPILEUP.out.pileup.combine(refFasta))

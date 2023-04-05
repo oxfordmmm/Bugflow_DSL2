@@ -667,7 +667,7 @@ Mask Reference Genome
 
 process REFMASK {
 
-	conda '/home/ndm.local/arund/miniconda3/envs/blast_env'
+	//conda '/home/ndm.local/arund/miniconda3/envs/blast_env'
     
     publishDir "${params.outdir}/refmask", mode: "copy"
 
@@ -683,7 +683,7 @@ process REFMASK {
 	script:
 	"""
     makeblastdb -dbtype nucl -in ${refFasta}
-    /home/ndm.local/arund/HPRU/Bugflow_DSL2/bin/genRefMask.py -r ${refFasta} -m 200 -p 95
+    /mnt/scratch/workflows/Bugflow_DSL2/bin/genRefMask.py -r ${refFasta} -m 200 -p 95
     bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}.rpt_mask.gz
 	echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
 	tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
@@ -704,9 +704,9 @@ process BWA {
     publishDir "${params.outdir}/bwa", mode: "copy"
     
 	input:
-	tuple val(uuid), path(reads)
+	tuple val(uuid), path(reads), path(refFasta)
     path(ref_index)
-    path(refFasta)
+    //path(refFasta)
 
     output:
     tuple val(uuid), path("${uuid}.aligned.sam"), emit: bwa_mapped
@@ -727,7 +727,7 @@ Remove duplicates using Samtools v.1.9
 process REMOVE_DUPLICATES {
     cpus 4
 
-    conda './conda/samtools.yaml'
+    //conda './conda/samtools.yaml'
 
 	tag "remove duplicates ${uuid}"
 	
@@ -759,7 +759,7 @@ Run Samtools mpileup - creates BCF containing genotype likelihoods
 
 process MPILEUP {
 
-    conda './conda/bcftools.yaml'
+    //conda './conda/bcftools.yaml'
 
     publishDir "${params.outdir}/pileup", mode: "copy"
 
@@ -786,7 +786,7 @@ Call SNPs using Samtools call from mpileup file
 
 process SNP_CALL {
     
-    conda './conda/bcftools.yaml'
+    //conda './conda/bcftools.yaml'
     
 
     input:
@@ -827,7 +827,7 @@ Produce cleaner SNPs
 
 process FILTER_SNPS {
 
-    conda './conda/bcftools.yaml'
+    //conda './conda/bcftools.yaml'
 
     publishDir "${params.outdir}/snps_called_vcf", mode: 'copy'
 
@@ -862,7 +862,7 @@ process FILTER_SNPS {
     -h ${refFasta.baseName}.rpt_mask.hdr ${uuid}.bcf -Ob -o ${uuid}.masked.bcf.gz
     
     #filter vcf
-    bcftools filter -s Q30 -e '%QUAL<30' -Ou ${uuid}.masked.bcf.gz | 
+    bcftools filter -s Q30  -Ou ${uuid}.masked.bcf.gz | 
         bcftools filter -s HetroZ -e "GT='het'" -m+ -Ou | 
     	bcftools filter -s OneEachWay -e 'DP4[2] == 0 || DP4[3] ==0' -m+ -Ou | 
     	bcftools filter -s RptRegion -e 'RPT=1' -m+ -Ou | 
@@ -892,8 +892,8 @@ Generate a consensus FASTA file
 
 process CONSENSUS_FA {
 
-        conda './conda/samtools.yaml'
-        conda './conda/bcftools.yaml'
+        //conda './conda/samtools.yaml'
+        //conda './conda/bcftools.yaml'
 
         publishDir "${params.outdir}/consensus_fa", mode: 'copy'
 
@@ -934,7 +934,7 @@ Create a multi-fasta alignment using MAFFT
 */
 
 process MSA {
-    conda './conda/mafft.yaml'
+    //conda './conda/mafft.yaml'
 
     publishDir "${params.outdir}/msa", mode: 'copy'
 
