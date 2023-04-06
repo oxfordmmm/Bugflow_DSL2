@@ -1,5 +1,5 @@
 # Bugflow DSL2
-A bacterial sequencing data processing pipeline
+A nextflow pipeline for processing bacterial sequences
 
 ## Overview
 DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling, de novo assembly and genome annotation (AMRG, point mutations and cgMLST profile (C. difficile only)) of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
@@ -18,11 +18,12 @@ Mapping and Variant calling
  - Snippy v4.6
  
 Assembly
- - Shovill v.1.1.0 (spades and pilon) 
+ - Shovill v1.1.0 (spades and pilon) 
 
-Annotation: AMRG and Point mutations
+AMRG Annotation
  - Abricate v0.8
- - AMRFinderPlusS
+ - AMRFinderPlus v3.11.2
+ - BLASTN vs C. difficile curated AMR database
 
 ## Installation
 Requires a local installation of 
@@ -98,12 +99,12 @@ wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/004/SRR3349174/SRR3349174_2.fastq
 Screen and assemble the example reads
 
 ```
-nextflow run main_bugflow_dsl2.nf -entry shovill --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output"
+nextflow run main.nf -entry cdiff_hcgmlst_amrg_blastn_single --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output"
 ```
 
 Alternatively to resume a partially completed run where the intermediate files have been saved:
 ```
-nextflow run main_bugflow_dsl2.nf -entry shovill --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output" -resume
+nextflow run main.nf -entry cdiff_hcgmlst_amrg_blastn_single --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output" -resume
 ```
 
 ---
