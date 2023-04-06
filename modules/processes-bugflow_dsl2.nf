@@ -638,6 +638,7 @@ Index Reference Genome
 
 process INDEXREFERENCE {
     tag {"index reference FASTA"}
+    label 'blast'
     
 	input:
     path (refFasta)
@@ -666,9 +667,7 @@ Mask Reference Genome
 
 
 process REFMASK {
-
-	//conda '/home/ndm.local/arund/miniconda3/envs/blast_env'
-    
+    label 'blast'
     publishDir "${params.outdir}/refmask", mode: "copy"
 
     input:
@@ -698,6 +697,7 @@ Map reads to Reference genome using BWA
 
 process BWA {
 	cpus 8
+    label 'blast'
 	
     tag { "map clean ${uuid} reads to reference" }
 
@@ -726,9 +726,7 @@ Remove duplicates using Samtools v.1.9
 
 process REMOVE_DUPLICATES {
     cpus 4
-
-    //conda './conda/samtools.yaml'
-
+    label 'blast'
 	tag "remove duplicates ${uuid}"
 	
 	publishDir "${params.outdir}/bwa", mode: "copy"
@@ -736,7 +734,6 @@ process REMOVE_DUPLICATES {
 	input:
     tuple val (uuid), path (bwa_mapped)
     
-
     output:
     tuple val(uuid), path("${uuid}.bam"), emit: dup_removed
 
@@ -758,9 +755,7 @@ Run Samtools mpileup - creates BCF containing genotype likelihoods
 */
 
 process MPILEUP {
-
-    //conda './conda/bcftools.yaml'
-
+    label 'blast'
     publishDir "${params.outdir}/pileup", mode: "copy"
 
     input:
@@ -785,9 +780,7 @@ Call SNPs using Samtools call from mpileup file
 */
 
 process SNP_CALL {
-    
-    //conda './conda/bcftools.yaml'
-    
+    label 'blast'
 
     input:
     tuple val(uuid), path(pileup), path(refFasta)
@@ -826,9 +819,7 @@ Produce cleaner SNPs
 */
 
 process FILTER_SNPS {
-
-    //conda './conda/bcftools.yaml'
-
+    label 'blast'
     publishDir "${params.outdir}/snps_called_vcf", mode: 'copy'
 
     input:
@@ -891,12 +882,8 @@ Generate a consensus FASTA file
 */
 
 process CONSENSUS_FA {
-
-        //conda './conda/samtools.yaml'
-        //conda './conda/bcftools.yaml'
-
+        label 'blast'
         publishDir "${params.outdir}/consensus_fa", mode: 'copy'
-
 
 	    input:
 		tuple val(uuid), path(snps_vcf), path("${uuid}.snps.vcf.gz.csi"), 
