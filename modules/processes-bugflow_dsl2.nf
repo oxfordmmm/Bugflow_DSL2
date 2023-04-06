@@ -644,24 +644,17 @@ process INDEXREFERENCE {
     path (refFasta)
 	
 	output:
-	publishDir "$params.outdir"
-	path ("${refFasta}_bwa.fai"), emit: bwa_fai
-    path("${refFasta}_samtools.fai"), emit: sam_fai
-    //path ("*"), emit: ref_index
+	publishDir "$params.outdir", mode: "copy"
+	//path ("${refFasta}_bwa.fai"), emit: bwa_fai
+    //path("${refFasta.baseName}_samtools.fai"), emit: sam_fai
+    path ("*"), emit: ref_index
 
 	script:
 	"""
 	#bwa index
-	bwa index ${refFasta} > ${refFasta}_bwa.fai
+    bwa index ${refFasta}
 	#samtools index
-	samtools faidx ${refFasta} > ${refFasta}_samtools.fai
-	#blast indexes for self-self blast
-	makeblastdb -dbtype nucl -in $refFasta
-	#reference mask
-    #genRefMask.py -r $refFasta -m 200 -p 95
-    #bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}.rpt_mask.gz
-	#echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
-	#tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
+	samtools faidx ${refFasta}
     """
 }
 
@@ -674,20 +667,23 @@ Mask Reference Genome
 
 
 process REFMASK {
-	label 'blast'
+    label 'blast'
+    publishDir "${params.outdir}/refmask", mode: "copy"
 
     input:
-	path(refFasta)	
+	path(refFasta)
 
 	output:
-    path("${refFasta.baseName}")
-    //path("${refFasta.baseName}.rpt_mask.hdr")
-	//path("${refFasta.baseName}.rpt_mask.gz"), emit: refFasta.baseName
+    path("${refFasta.baseName}.rpt_mask.gz"), emit: masked_ref
+    path("${refFasta.baseName}.rpt_mask.hdr"), emit: masked_ref_hdr
+    
+	
 
 	script:
 	"""
-    genRefMask.py -r ${refFasta} -m 200 -p 95
-    bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}
+    makeblastdb -dbtype nucl -in ${refFasta}
+    /mnt/scratch/workflows/Bugflow_DSL2/bin/genRefMask.py -r ${refFasta} -m 200 -p 95
+    bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}.rpt_mask.gz
 	echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
 	tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
     """
@@ -700,13 +696,17 @@ Map reads to Reference genome using BWA
 */
 
 process BWA {
-    tag { "map clean ${uuid} reads to reference" }
+	cpus 8
     label 'blast'
+	
+    tag { "map clean ${uuid} reads to reference" }
 
     publishDir "${params.outdir}/bwa", mode: "copy"
     
 	input:
-	tuple val(uuid), path(reads), path(bwa_fai)
+	tuple val(uuid), path(reads), path(refFasta)
+    path(ref_index)
+    //path(refFasta)
 
     output:
     tuple val(uuid), path("${uuid}.aligned.sam"), emit: bwa_mapped
@@ -714,7 +714,7 @@ process BWA {
 	//don't add read group header here results in poorly formatted header
     
 	"""
-    bwa mem -r 1.5 -O 6 -t ${task.cpus} bwa_fai ${uuid}_clean.1.fq.gz ${uuid}_clean.2.fq.gz | samtools view -uS - | samtools sort > ${uuid}.aligned.sam
+    bwa mem -r 1.5 -O 6 -t ${task.cpus} ${refFasta} ${reads[0]} ${reads[1]} | samtools view -uS - | samtools sort > ${uuid}.aligned.sam
     """
 }
 
@@ -725,15 +725,15 @@ Remove duplicates using Samtools v.1.9
 */
 
 process REMOVE_DUPLICATES {
-    tag "remove duplicates ${uuid}"
+    cpus 4
     label 'blast'
+	tag "remove duplicates ${uuid}"
 	
 	publishDir "${params.outdir}/bwa", mode: "copy"
     
 	input:
     tuple val (uuid), path (bwa_mapped)
     
-
     output:
     tuple val(uuid), path("${uuid}.bam"), emit: dup_removed
 
@@ -756,20 +756,18 @@ Run Samtools mpileup - creates BCF containing genotype likelihoods
 
 process MPILEUP {
     label 'blast'
-
     publishDir "${params.outdir}/pileup", mode: "copy"
 
     input:
     tuple val(uuid), path(bam), path(refFasta)
-
+    	
+ 
     output:
     tuple val(uuid), path("${uuid}.pileup.bcf"), emit: pileup
-    
-    //publishDir "$outputPath/$uuid/bwa_mapped/${refFasta.baseName}/vcf", mode: 'copy'
 
 	//use bcftools mpileup to generate vcf file
 	//mpileup genearates the likelihood of each base at each site
-    """
+ 	"""
     bcftools mpileup -Q25 -q30 -E -o40 -e20 -h100 -m2 -F0.002 -Ou -f ${refFasta} ${uuid}.bam > ${uuid}.pileup.bcf
     """
 
@@ -787,10 +785,11 @@ process SNP_CALL {
     input:
     tuple val(uuid), path(pileup), path(refFasta)
     
+ 
     output:
     tuple val(uuid), path("${uuid}.bcf"), path("${uuid}.allsites.bcf"), emit: snps_called
-    //path("${uuid}.bcf"), emit: bcf
-    //path("${uuid}.allsites.bcf"), emit: allsites
+    path("${uuid}.bcf"), emit: bcf
+    path("${uuid}.allsites.bcf"), emit: allsites
     
     publishDir "${params.outdir}/snps_called_bcf", mode: 'copy'
 
@@ -806,9 +805,9 @@ process SNP_CALL {
     # 	-m use multiallelic model
     # 	-v output variants only
     bcftools call --prior 0.01 -Ou -m -v ${uuid}.pileup.bcf | bcftools norm -f ${refFasta} -m +any -Ou -o ${uuid}.bcf
-
+    	
     # call all sites
-    bcftools call -Ou -m ${uuid}.pileup.bcf | bcftools norm -f $refFasta -m +any -Ou -o ${uuid}.allsites.bcf
+    bcftools call -Ou -m ${uuid}.pileup.bcf | bcftools norm -f ${refFasta} -m +any -Ou -o ${uuid}.allsites.bcf
     """
 
 }
@@ -821,29 +820,19 @@ Produce cleaner SNPs
 
 process FILTER_SNPS {
     label 'blast'
-
     publishDir "${params.outdir}/snps_called_vcf", mode: 'copy'
 
     input:
-    //tuple val(uuid), path(bcf),path(allsites) 
-    tuple val(uuid), path(snps_called)
+    tuple val(uuid), path(bcf), path(allsites)
     path(refFasta)
-
+    path(masked_ref)
+    path(masked_ref_hdr)
  
     output:
-    //tuple val(uuid), path("${uuid}.snps.vcf.gz")
-    //path("${uuid}.snps.vcf.gz")
-    //path("${uuid}.snps.vcf.gz.csi")
-    //path("${uuid}.zero_coverage.vcf.gz")
-    //path("${uuid}.zero_coverage.vcf.gz.csi"), emit: filtered_snps
-    //file ("*")
-    path("${uuid}.masked.bcf.gz"), emit: masked_bcf
-    path("${uuid}.all.vcf.gz"), emit: all_vcf
-    path("${uuid}.snps.vcf.gz"), emit: snps_vcf
-    path("${uuid}.indels.vcf.gz"), emit: indels_vcf
-    path("${uuid}.zero_coverage.vcf.gz"), emit: zerocov_vcf
-
-
+    tuple val(uuid), path("${uuid}.snps.vcf.gz"),
+    path("${uuid}.snps.vcf.gz.csi"),
+    path("${uuid}.zero_coverage.vcf.gz"),
+    path("${uuid}.zero_coverage.vcf.gz.csi"), emit: filtered_snps
 	
 	//use bcftools to filter normalised bcf file of variants from pileup and call
 	//use one line for each filter condition and label
@@ -857,17 +846,19 @@ process FILTER_SNPS {
 		// mask SNPs within 7 bp of INDEL
 		// require high quality depth of 5 for call
 	
+    script:
     """
     #annotate vcf file with repetitive regions
-	bcftools annotate -a ${refFasta.baseName}.rpt_mask.gz -c CHROM,FROM,TO,RPT -h ${refFasta.baseName}.rpt_mask.hdr ${uuid}.bcf -Ob -o ${uuid}.masked.bcf.gz
+	bcftools annotate -a ${refFasta.baseName}.rpt_mask.gz -c CHROM,FROM,TO,RPT \
+    -h ${refFasta.baseName}.rpt_mask.hdr ${uuid}.bcf -Ob -o ${uuid}.masked.bcf.gz
     
     #filter vcf
-    bcftools filter -s Q30 -e '%QUAL<30' -Ou ${uuid}.masked.bcf.gz | 
+    bcftools filter -s Q30  -Ou ${uuid}.masked.bcf.gz | 
         bcftools filter -s HetroZ -e "GT='het'" -m+ -Ou | 
-        bcftools filter -s OneEachWay -e 'DP4[2] == 0 || DP4[3] ==0' -m+ -Ou | 
-        bcftools filter -s RptRegion -e 'RPT=1' -m+ -Ou | 
-        bcftools filter -s Consensus90 -e '((DP4[2]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3]))<=0.9' -m+ -Ou | 
-        bcftools filter -s HQDepth5 -e '(DP4[2]+DP4[3])<=5' -m+ -Oz -o ${uuid}.all.vcf.gz
+    	bcftools filter -s OneEachWay -e 'DP4[2] == 0 || DP4[3] ==0' -m+ -Ou | 
+    	bcftools filter -s RptRegion -e 'RPT=1' -m+ -Ou | 
+    	bcftools filter -s Consensus90 -e '((DP4[2]+DP4[3])/(DP4[0]+DP4[1]+DP4[2]+DP4[3]))<=0.9' -m+ -Ou | 
+    	bcftools filter -s HQDepth5 -e '(DP4[2]+DP4[3])<=5' -m+ -Oz -o ${uuid}.all.vcf.gz
     
     #create vcf file with just SNPs
     bcftools filter -i 'TYPE="snp"' -m+ -Oz -o ${uuid}.snps.vcf.gz ${uuid}.all.vcf.gz 
@@ -891,38 +882,62 @@ Generate a consensus FASTA file
 */
 
 process CONSENSUS_FA {
-    label 'blast'
+        label 'blast'
+        publishDir "${params.outdir}/consensus_fa", mode: 'copy'
 
-    publishDir "${params.outdir}/consensus_fa", mode: 'copy'
-
-    input:
-    tuple val(uuid), path(snps_vcf), path("${uuid}.snps.vcf.gz.csi"), 
-    path(zerocov_vcf), file("${uuid}.zero_coverage.vcf.gz.csi")
-    file(refFasta)
-
-    output:
-    path("tmp.bcf.gz")
-    path("tmp.fa")
-    path("${uuid}.consensus.fa")
-
-    
-    // call consensus sequence
-    // -S flag in bcftools filter sets GT (genotype) to missing, with -M flag here
-    // setting value to N
-    """
-    #create a temporary bcf file with genotype of filtered variants set to .
-    bcftools filter -S . -e 'FILTER != "PASS"' -Ob -o tmp.bcf.gz ${uuid}.snps.vcf.gz
-    bcftools index tmp.bcf.gz
-
-    #create consensus file with all the sites set to . above replaced as N
-    cat $refFasta | bcftools consensus -H 1 -M "N" tmp.bcf.gz > tmp.fa
-
-    #set all the sites with zero coverage to be -
-    samtools faidx tmp.fa 
-    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.consensus.fa
-    """
+	    input:
+		tuple val(uuid), path(snps_vcf), path("${uuid}.snps.vcf.gz.csi"), 
+    	path(zerocov_vcf), path("${uuid}.zero_coverage.vcf.gz.csi")
+	    path(refFasta)
+	
+	    output:
+		//path("tmp.bcf.gz")
+        //path("tmp.fa")
+        path("${uuid}.fa.gz")
+	
+	    
+	    // call consensus sequence
+		// -S flag in bcftools filter sets GT (genotype) to missing, with -M flag here
+		// setting value to N
+	    """
+	    #create a temporary bcf file with genotype of filtered variants set to .
+	    bcftools filter -S . -e 'FILTER != "PASS"' -Ob -o tmp.bcf.gz ${uuid}.snps.vcf.gz
+	    bcftools index tmp.bcf.gz
+	
+	    #create consensus file with all the sites set to . above replaced as N
+	    cat ${refFasta} | bcftools consensus -H 1 -M "N" tmp.bcf.gz > tmp.fa
+	
+	    #set all the sites with zero coverage to be -
+	    samtools faidx tmp.fa 
+	    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.fa
+        gzip ${uuid}.fa
+	    """
 }
 
+/*
+#=================================================================
+Create a multi-fasta alignment using MAFFT
+#=================================================================
+*/
+
+process MSA {
+    //conda './conda/mafft.yaml'
+
+    publishDir "${params.outdir}/msa", mode: 'copy'
+
+    input:
+    path("*")
+    
+    output:
+    path("mafft_consensus_msa.aln")
+
+    script:
+    """
+    cat *.consensus.fa > consensus_msa.aln
+    mafft consensus_msa.aln > mafft_consensus_msa.aln
+    """
+
+}
 
 process HCGMLST_READS_DE {
     tag { "cgMLST Profiling using Hash-cgMLST: ${uuid}" }
@@ -987,7 +1002,7 @@ process CDIFF_AMRG_BLASTN_READS {
 
     """
     makeblastdb -in ${cdiff_amr_fasta} -parse_seqids  -title "C. diff AMRG db" -dbtype nucl -out cdiffamr
-    blastn -query ${params.outdir}/assemblies/${uuid}_contigs.fa -db cdiffamr -out cdiffamr-${uuid}.tsv -perc_identity 95 -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
+    blastn -query ${params.outdir}/assemblies/${uuid}_contigs.fa -db cdiffamr -out cdiffamr-${uuid}.tsv -perc_identity 97 -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
     echo -e "qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore" > cdiffamr-${uuid}_blastn.tsv && cat cdiffamr-${uuid}.tsv >> cdiffamr-${uuid}_blastn.tsv
     """
     

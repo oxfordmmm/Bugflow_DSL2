@@ -4,16 +4,22 @@
 DSL2 version of Bugflow: A pipeline for mapping followed by variant calling and de novo assembly of Illumina short read libraries
 
 QC
- - Fastp
- - FastQC
- - MultiQC
- - Quast
+ - Fastp v0.23.2
+ - FastQC v0.11.9
+ - MultiQC v1.12
+ - Quast v5.0.2
 
 Mapping and Variant calling
- - Snippy
+ - BWA mem and bcftools
+ - Snippy v4.6
  
 Assembly
- - Shovill (spades) 
+ - Shovill v1.1.0 (spades and pilon)
+
+AMRG Annotation
+ - Abricate v0.8
+ - AMRFinderPlus v3.11.2
+ - BLASTN vs C. difficile curated AMR database (also contains C. diff toxin genes)
 */
 
 /*
@@ -36,15 +42,15 @@ include { QUAST_FROM_READS; QUAST_FROM_CONTIGS } from './modules/processes-bugfl
 include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS; PLATON_READS; PLATON_CONTIGS; MOBTYPER; CDIFF_AMRG_BLASTN_READS; SUMMARY_BLASTN; AMR_ABRFORMAT; AMRFINDERPLUS_CDIFF} from './modules/processes-bugflow_dsl2.nf'
 include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; HCGMLST_READS_DE; HCGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
 include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
-
+include { SNIPPYFASTQ; SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
 /*
 #==============================================
 Parameters
 #==============================================
 */
 
-params.ref = " "
-params.reads = " "
+params.ref = "/mnt/arun_in_bucket/REFSEQ_Cdiff/Cdiff_630_GCA_000009205.1.fasta"
+params.reads = "/mnt/arun_in_bucket/UKHSA_test/*{1,2}_001.fastq.gz"
 params.outdir = " "
 params.contigs = " "
 params.mlstdb = "cdifficile"
@@ -85,17 +91,21 @@ workflow cdiff_mapping_snpCalling_DE {
            .set{reads}
        Channel.fromPath(params.ref, checkIfExists:true)
            //.view()       
+           .first()
            .set{refFasta}
        main:
        INDEXREFERENCE(refFasta)     
-       //REFMASK(refFasta)
+       REFMASK(refFasta)
        FASTP(reads)
-       BWA(FASTP.out.reads.combine(INDEXREFERENCE.out.bwa_fai))
+       BWA(FASTP.out.reads.combine(refFasta), INDEXREFERENCE.out)
        REMOVE_DUPLICATES(BWA.out)
        MPILEUP(REMOVE_DUPLICATES.out.dup_removed.combine(refFasta))
        SNP_CALL(MPILEUP.out.pileup.combine(refFasta))
-       //FILTER_SNPS(SNP_CALL.out, REFMASK.out)
-       //CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
+       FILTER_SNPS(SNP_CALL.out.snps_called, refFasta, REFMASK.out.masked_ref, REFMASK.out.masked_ref_hdr)
+       //FILTER_SNPS.out.filtered_snps.view()
+       CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
+       //MSA(CONSENSUS_FA.out.collect())
+       
 }
 
 

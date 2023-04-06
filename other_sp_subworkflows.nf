@@ -47,9 +47,9 @@ Parameters
 #==============================================
 */
 
-params.ref = " "
-params.reads = " "
-params.outdir = " "
+params.ref = "/mnt/arun_in_bucket/REFSEQ_Cdiff/Cdiff_630_GCA_000009205.1.fasta"
+params.reads = "/mnt/arun_in_bucket/UKHSA_test/*{1,2}_001.fastq.gz"
+params.outdir = "/mnt/scratch/soft/runListCompare_rev/consensus_SNPs_1/"
 params.contigs = " "
 params.mlstdb = "ecoli"
 params.prefix = "core"
