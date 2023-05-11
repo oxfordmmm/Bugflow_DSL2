@@ -639,12 +639,12 @@ Index Reference Genome
 process INDEXREFERENCE {
     tag {"index reference FASTA"}
     label 'blast'
+    publishDir "$params.outdir", mode: "copy"
     
 	input:
     path (refFasta)
 	
 	output:
-	publishDir "$params.outdir", mode: "copy"
 	//path ("${refFasta}_bwa.fai"), emit: bwa_fai
     //path("${refFasta.baseName}_samtools.fai"), emit: sam_fai
     path ("*"), emit: ref_index
