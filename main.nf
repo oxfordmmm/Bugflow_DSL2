@@ -176,7 +176,7 @@ workflow cdiff_hcgmlst_amrg_blastn_single {
        
        main:
        RAWFASTQC_SINGLE(reads)
-       FASTP(reads)
+       FASTP(reads) // TODO: FASTP_SINGLE produces all the outputs that FASTP gives??
        FASTP_SINGLE(reads)
        CLEANFASTQC_SINGLE(FASTP_SINGLE.out.cat_fastq)
        //MULTIQC_READS(RAWFASTQC.out.mix(CLEANFASTQC.out).collect())

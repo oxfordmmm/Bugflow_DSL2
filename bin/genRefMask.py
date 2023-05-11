@@ -23,7 +23,8 @@ def run_blast(refpath, perc_identity, min_length):
 	
 	#run blast
 	blastn_cline = NcbiblastnCommandline(query=refpath, db=refpath, 
-						  dust='no', word_size=17, gapopen=5, gapextend=2, evalue=0.0001, perc_identity=perc_identity,
+						  dust='no', word_size=17, gapopen=5, gapextend=2,
+						  evalue=0.0001, perc_identity=perc_identity,
 						  outfmt='"6 qseqid sseqid pident length qstart qend sstart send"')
 	try:
 		blast_out, blast_err = blastn_cline()
