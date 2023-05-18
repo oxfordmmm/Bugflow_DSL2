@@ -1002,8 +1002,8 @@ process CDIFF_AMRG_BLASTN_READS {
 
     """
     makeblastdb -in ${cdiff_amr_fasta} -parse_seqids  -title "C. diff AMRG db" -dbtype nucl -out cdiffamr
-    blastn -query ${params.outdir}/assemblies/${uuid}_contigs.fa -db cdiffamr -out cdiffamr-${uuid}.tsv -perc_identity 97 -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
-    echo -e "qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore" > cdiffamr-${uuid}_blastn.tsv && cat cdiffamr-${uuid}.tsv >> cdiffamr-${uuid}_blastn.tsv
+    blastn -query ${params.outdir}/assemblies/${uuid}_contigs.fa -db cdiffamr -out cdiffamr-${uuid}.tsv -perc_identity 90 -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore slen"
+    echo -e "qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore\tslen" > cdiffamr-${uuid}_blastn.tsv && cat cdiffamr-${uuid}.tsv >> cdiffamr-${uuid}_blastn.tsv
     """
     
 }
