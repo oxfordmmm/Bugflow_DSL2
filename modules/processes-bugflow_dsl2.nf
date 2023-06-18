@@ -1126,3 +1126,28 @@ process MOBTYPER {
     """ 
 
 }
+
+process FIND_MIXED_SITES {
+    tag { "Find mixed sites in mlst loci: ${uuid}" }
+    label 'pysam'
+
+    publishDir "${params.outdir}/mixed_sites", mode: "copy"
+
+    input:
+    tuple val(uuid), path(bam)
+    path(refFasta)
+    path(loci_tsv)
+
+    output:
+    path("${uuid}_mixed_sites*")
+
+    script:
+    """
+    samtools index ${bam}
+    find_mixed_sites.py --ref $refFasta \
+        --bam ${bam} \
+        --loci $loci_tsv \
+        --outfile_prefix ${uuid}_mixed_sites
+    """ 
+
+}
