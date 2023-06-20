@@ -43,6 +43,7 @@ include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS; PLATON_READS; PLATON_CONTIGS
 include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; HCGMLST_READS_DE; HCGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
 include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTQ; SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
+include { KRAKEN2 } from './modules/processes-bugflow_dsl2.nf'
 /*
 #==============================================
 Parameters
@@ -56,6 +57,7 @@ params.contigs = " "
 params.mlstdb = "cdifficile"
 params.prefix = "core"
 params.blastn = " "
+params.kraken2_db="/mnt/scratch/databases/k2_standard_8gb"
 
 /*
 #==============================================
@@ -190,4 +192,15 @@ workflow cdiff_hcgmlst_amrg_blastn_single {
        CDIFF_AMRG_BLASTN_READS(ASSEMBLY.out.assembly, params.cdiff_amr_fasta)
        AMRFINDERPLUS_CDIFF(ASSEMBLY.out.assembly)
        //AMR_ABRFORMAT(ASSEMBLY.out.assembly)
+       KRAKEN2(FASTP.out.reads, params.kraken2_db)
+}
+
+workflow kraken2 {
+       Channel.fromFilePairs(params.reads, checkIfExists: true)
+           .map{it}
+           .set{reads}
+       
+       main:
+       FASTP(reads) // TODO: FASTP_SINGLE produces all the outputs that FASTP gives??
+       KRAKEN2(FASTP.out.reads, params.kraken2_db)
 }

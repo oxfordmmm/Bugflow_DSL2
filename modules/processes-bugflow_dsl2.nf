@@ -1126,3 +1126,24 @@ process MOBTYPER {
     """ 
 
 }
+
+process KRAKEN2 {
+    label 'kraken2'
+    tag {"kraken2 and bracken species assignment for $uuid reads"}
+
+    publishDir "${params.outdir}/kraken2", mode: "copy"
+
+    input:
+    tuple val(uuid), path(reads)
+    val(db)
+
+    output:
+    tuple val(uuid), path("${uuid}_kraken2_report.tsv"), emit: kraken2_report
+    tuple val(uuid), path("${uuid}_bracken_report.tsv"), emit: bracken_report
+
+    script:
+    """
+    kraken2 --threads $task.cpus --db $db $reads --output ${uuid}_classification.tsv --report ${uuid}_kraken2_report.tsv
+    bracken -d $db -i ${uuid}_kraken2_report.tsv -o ${uuid}_bracken_report.tsv
+    """
+}
