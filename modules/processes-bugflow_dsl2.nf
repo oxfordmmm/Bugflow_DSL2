@@ -1155,3 +1155,53 @@ process FIND_MIXED_SITES {
     """ 
 
 }
+
+process FIND_MIXED_SITES {
+    tag { "Find mixed sites in mlst loci: ${uuid}" }
+    label 'pysam'
+
+    publishDir "${params.outdir}/mixed_sites", mode: "copy"
+
+    input:
+    tuple val(uuid), path(bam)
+    path(refFasta)
+    path(loci_tsv)
+
+    output:
+    path("${uuid}_mixed_sites*"), emit: 'mixed_sites'
+    path("${uuid}_mixed_infection_estimate.tsv"), emit: 'estimate'
+
+    script:
+    """
+    samtools index ${bam}
+    find_mixed_sites.py --ref $refFasta \
+        --bam ${bam} \
+        --loci $loci_tsv \
+        --outfile_prefix ${uuid}_mixed_sites
+    
+    mixed_infection_estimator.R ${uuid} ${uuid}_mixed_sites_eyre.tsv \
+        ${uuid}_mixed_infection_estimate.tsv 100
+    """ 
+
+}
+
+process KRAKEN2 {
+    label 'kraken2'
+    tag {"kraken2 and bracken species assignment for $uuid reads"}
+
+    publishDir "${params.outdir}/kraken2", mode: "copy"
+
+    input:
+    tuple val(uuid), path(reads)
+    val(db)
+
+    output:
+    tuple val(uuid), path("${uuid}_kraken2_report.tsv"), emit: kraken2_report
+    tuple val(uuid), path("${uuid}_bracken_report.tsv"), emit: bracken_report
+
+    script:
+    """
+    kraken2 --threads $task.cpus --db $db $reads --output ${uuid}_classification.tsv --report ${uuid}_kraken2_report.tsv
+    bracken -d $db -i ${uuid}_kraken2_report.tsv -o ${uuid}_bracken_report.tsv
+    """
+}
