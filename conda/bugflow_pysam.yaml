@@ -1,9 +1,14 @@
-name: fastqc_env
+name: pysam
 channels:
+  - conda-forge
   - bioconda
+  - r
   - defaults
 dependencies:
   - pysam
   - pysamstats
   - pandas
   - samtools
+  - r
+  - r-tidyverse
+  - r-domc

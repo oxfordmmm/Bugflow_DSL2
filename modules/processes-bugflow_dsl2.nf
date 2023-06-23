@@ -1139,7 +1139,8 @@ process FIND_MIXED_SITES {
     path(loci_tsv)
 
     output:
-    path("${uuid}_mixed_sites*")
+    path("${uuid}_mixed_sites*"), emit: 'mixed_sites'
+    path("${uuid}_mixed_infection_estimate.tsv"), emit: 'estimate'
 
     script:
     """
@@ -1148,6 +1149,9 @@ process FIND_MIXED_SITES {
         --bam ${bam} \
         --loci $loci_tsv \
         --outfile_prefix ${uuid}_mixed_sites
+    
+    mixed_infection_estimator.R ${uuid} ${uuid}_mixed_sites_eyre.tsv \
+        ${uuid}_mixed_infection_estimate.tsv 100
     """ 
 
 }
