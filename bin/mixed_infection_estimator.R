@@ -136,6 +136,7 @@ if (is.na(file.info(f)$size)) {
     #if no base counts skip the file
     if(nrow(base.count)==0)
     {
+        cat(id, 0, 0, 0, 0, 0, 0, 0, "0\n", sep="\t", file = outlog, append=TRUE)
         stop(paste("Base counts missing for id",id,"skipping...."))
     }
             
@@ -223,5 +224,6 @@ if (is.na(file.info(f)$size)) {
     print (paste("d (", bs.d.ci["2.5%"], " - ", bs.d.ci["97.5%"], ")"))
     
     cat(id, md.ML.m, md.ML.d, md.ML.d*nrow(base.count), md.dev, bs.m.ci["2.5%"], bs.m.ci["97.5%"], 
-        bs.d.ci["2.5%"], bs.d.ci["97.5%"], "\n", sep="\t", file = outlog, append=TRUE)
+        bs.d.ci["2.5%"], bs.d.ci["97.5%"], sep="\t", file = outlog, append=TRUE)
+    cat("\n", file = outlog, append=TRUE)
 }
