@@ -166,8 +166,7 @@ def main():
     col_names = ['loci', 'chrom', 'pos', 'reads_all', 'major', 'rest', 'major_pc', 'rest_pc', 'insertions', 'deletions', 'A', 'C', 'T', 'G']
     df = pd.DataFrame(columns=col_names)
     if len(variant_sites) > 0:
-        df = pd.DataFrame(variant_sites)
-        df = df[col_names]
+        df = pd.DataFrame(variant_sites)[col_names]
     df.to_csv(f"{outfile_prefix}.csv", index=False)
     
     summary_df = summarise_mixed_sites(df, total_sites)

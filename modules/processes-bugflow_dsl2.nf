@@ -893,7 +893,7 @@ process CONSENSUS_FA {
 	    output:
 		//path("tmp.bcf.gz")
         //path("tmp.fa")
-        path("${uuid}.fa.gz")
+        tuple val(uuid), path("${uuid}.fa.gz")
 	
 	    
 	    // call consensus sequence
@@ -1156,35 +1156,6 @@ process FIND_MIXED_SITES {
 
 }
 
-process FIND_MIXED_SITES {
-    tag { "Find mixed sites in mlst loci: ${uuid}" }
-    label 'pysam'
-
-    publishDir "${params.outdir}/mixed_sites", mode: "copy"
-
-    input:
-    tuple val(uuid), path(bam)
-    path(refFasta)
-    path(loci_tsv)
-
-    output:
-    path("${uuid}_mixed_sites*"), emit: 'mixed_sites'
-    path("${uuid}_mixed_infection_estimate.tsv"), emit: 'estimate'
-
-    script:
-    """
-    samtools index ${bam}
-    find_mixed_sites.py --ref $refFasta \
-        --bam ${bam} \
-        --loci $loci_tsv \
-        --outfile_prefix ${uuid}_mixed_sites
-    
-    mixed_infection_estimator.R ${uuid} ${uuid}_mixed_sites_eyre.tsv \
-        ${uuid}_mixed_infection_estimate.tsv 100
-    """ 
-
-}
-
 process KRAKEN2 {
     label 'kraken2'
     tag {"kraken2 and bracken species assignment for $uuid reads"}
@@ -1204,4 +1175,46 @@ process KRAKEN2 {
     kraken2 --threads $task.cpus --db $db $reads --output ${uuid}_classification.tsv --report ${uuid}_kraken2_report.tsv
     bracken -d $db -i ${uuid}_kraken2_report.tsv -o ${uuid}_bracken_report.tsv
     """
+}
+
+process COUNT_BASES_CALLED {
+    label 'count_bases_called'
+    tag {"count N's and -'s in $uuid consensus"}
+
+    publishDir "${params.outdir}/consensus_qc", mode: "copy"
+
+    input:
+    tuple val(uuid), path(consensus)
+
+    output:
+    tuple val(uuid), path("${uuid}_consensus_qc.tsv")
+
+    script:
+    """
+    count_bases_called.py $consensus ${uuid}_consensus_qc.tsv
+    """
+}
+
+process GENOME_DEPTH {                                                           
+    label 'genome_depth'
+    tag {"calculate depth of coverage in $uuid"}
+
+    publishDir "${params.outdir}/read_depth", mode: "copy"
+                                                                                
+    input:                                                                      
+    tuple val(uuid), path(bam)
+
+    output:                                                                     
+    tuple val(uuid), path("${uuid}_depth.csv"), emit: genomeDepths
+    tuple val(uuid), path("${uuid}_depth.tsv"), emit: tsv         
+    tuple val(uuid), path("*.png"), emit: graph      
+                                                                                
+    script:                                                                     
+    """                                                                         
+    samtools depth -aa ${bam} > ${uuid}_depth.tsv
+    coverage_stats.py ${uuid}_depth.tsv ${uuid}                     
+    mv coverage_stats.csv ${uuid}_depth.csv  
+
+    graph_coverage.R ${uuid}_depth.tsv 3000 5 70 ${uuid}_depth_graph.png       
+    """                                                 
 }
