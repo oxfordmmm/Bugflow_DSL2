@@ -1207,7 +1207,7 @@ process GENOME_DEPTH {
     output:                                                                     
     tuple val(uuid), path("${uuid}_depth.csv"), emit: genomeDepths
     tuple val(uuid), path("${uuid}_depth.tsv"), emit: tsv         
-    tuple val(uuid), path("*.png"), emit: graph      
+    // tuple val(uuid), path("*.png"), emit: graph      
                                                                                 
     script:                                                                     
     """                                                                         
@@ -1215,6 +1215,6 @@ process GENOME_DEPTH {
     coverage_stats.py ${uuid}_depth.tsv ${uuid}                     
     mv coverage_stats.csv ${uuid}_depth.csv  
 
-    graph_coverage.R ${uuid}_depth.tsv 3000 5 70 ${uuid}_depth_graph.png       
+    # graph_coverage.R ${uuid}_depth.tsv 3000 5 70 ${uuid}_depth_graph.png       
     """                                                 
 }
