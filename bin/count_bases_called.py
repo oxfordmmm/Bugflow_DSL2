@@ -10,8 +10,9 @@ def count_n_in_fasta(fasta_file, outfile):
         'seq_len' : 0,
         'N_count' : 0,
         'gap_count' : 0,
-        'N_rate' : 0,
-        'gap_rate' : 0,
+        'N_pc' : 0,
+        'gap_pc' : 0,
+        'pc_called' : 0,
     }
 
     with gzip.open(fasta_file, 'rt') if fasta_file.endswith('.gz') else open(fasta_file, 'r') as file:
@@ -21,8 +22,9 @@ def count_n_in_fasta(fasta_file, outfile):
             stats['N_count'] += sequence.count('N')
             stats['gap_count'] += sequence.count('-')
 
-    stats['N_rate'] = round(1000 * stats['N_count'] / stats['seq_len'], 2)
-    stats['gap_rate'] = round(1000 * stats['gap_count'] / stats['seq_len'], 2)
+    stats['N_pc'] = round(100 * stats['N_count'] / stats['seq_len'], 2)
+    stats['gap_pc'] = round(100 * stats['gap_count'] / stats['seq_len'], 2)
+    stats['pc_called'] = round(100 - stats['N_pc'] - stats['gap_pc'], 2)
 
     df = pd.DataFrame([stats])
     df.to_csv(outfile, sep='\t', index=False)
