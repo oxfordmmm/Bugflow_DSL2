@@ -1,0 +1,14 @@
+name: map_qc
+channels:
+  - conda-forge
+  - bioconda
+  - r
+  - defaults
+dependencies:
+  - seqkit
+  - pandas
+  - pysam
+  - biopython
+  - samtools
+  - r
+  - r-tidyverse

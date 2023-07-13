@@ -43,7 +43,10 @@ include { AMR_PLM_FROM_READS; AMR_PLM_FROM_CONTIGS; PLATON_READS; PLATON_CONTIGS
 include { MLST_FROM_READS; MLST_FROM_CONTIGS; MLST_CDIFF_FROM_READS; HCGMLST_READS_DE; HCGMLST_CONTIGS_DE } from './modules/processes-bugflow_dsl2.nf'
 include { INDEXREFERENCE; REFMASK;  BWA; REMOVE_DUPLICATES; MPILEUP; SNP_CALL; FILTER_SNPS; CONSENSUS_FA} from './modules/processes-bugflow_dsl2.nf'
 include { SNIPPYFASTQ; SNIPPYCORE } from './modules/processes-bugflow_dsl2.nf'
+include { FIND_MIXED_SITES } from './modules/processes-bugflow_dsl2.nf'
 include { KRAKEN2 } from './modules/processes-bugflow_dsl2.nf'
+include { COUNT_BASES_CALLED } from './modules/processes-bugflow_dsl2.nf'
+include { GENOME_DEPTH } from './modules/processes-bugflow_dsl2.nf'
 /*
 #==============================================
 Parameters
@@ -57,6 +60,7 @@ params.contigs = " "
 params.mlstdb = "cdifficile"
 params.prefix = "core"
 params.blastn = " "
+params.mlst_loci = "/mnt/arun_in_bucket/mlst_loci/mlst_loci.tsv"
 params.kraken2_db="/mnt/scratch/databases/k2_standard_8gb"
 
 /*
@@ -107,7 +111,11 @@ workflow cdiff_mapping_snpCalling_DE {
        //FILTER_SNPS.out.filtered_snps.view()
        CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
        //MSA(CONSENSUS_FA.out.collect())
-       
+       FIND_MIXED_SITES(REMOVE_DUPLICATES.out.dup_removed,
+              refFasta,
+              params.mlst_loci)
+       GENOME_DEPTH(REMOVE_DUPLICATES.out.dup_removed)
+       COUNT_BASES_CALLED(CONSENSUS_FA.out) 
 }
 
 
@@ -201,6 +209,28 @@ workflow kraken2 {
            .set{reads}
        
        main:
-       FASTP(reads) // TODO: FASTP_SINGLE produces all the outputs that FASTP gives??
+       FASTP(reads)
        KRAKEN2(FASTP.out.reads, params.kraken2_db)
+}
+
+workflow find_mixed_sites {
+       bams = Channel.fromPath("$params.outdir/bwa/*.bam")
+                     .map{ it -> tuple(it.simpleName, it)}
+
+       FIND_MIXED_SITES(bams,
+              params.ref,
+              params.mlst_loci)
+}
+
+workflow consensus_qc {
+       consensuses = Channel.fromPath("$params.outdir/consensus_fa/*.fa.gz")
+                     .map{ it -> tuple(it.simpleName, it)}
+
+       COUNT_BASES_CALLED(consensuses) 
+}
+
+workflow genome_depth {
+       bams = Channel.fromPath("$params.outdir/bwa/*.bam")
+                     .map{ it -> tuple(it.simpleName, it)}
+       GENOME_DEPTH(bams)
 }
