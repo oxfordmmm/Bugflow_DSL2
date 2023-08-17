@@ -5,6 +5,13 @@ A nextflow pipeline for processing bacterial sequences
 DSL2 version of Bug-flow DSL1: A pipeline for mapping followed by variant calling, de novo assembly and genome annotation (AMRG, point mutations and cgMLST profile (C. difficile only)) of Illumina short read libraries. The pipeline is developed for use by the Modernising Medical Microbiology consortium based at the University of Oxford.
 
 
+The workflow has two main parts: de novo based and mapping based. 
+- The de novo workflow does read qc (fastp) followed by assembly with Shovill which is qc'd with Quast. MLST and CGMLST are then calculated from the assemblies, and then AMR genes are detected using a mix of AMRFinderPlus and blast (for toxin genes and some specific resistance genes). Kraken2 is also run on the reads to check for contamination.
+- The mapping workflow also does read qc (fastp), then maps to the reference using bwa. bcftools is then used to create a pileup, filtering for read and mapping quality. From the pileup bcftools is used to call snps, filter and mask snps, and then create a consensus fasta. 
+A check is run for heterozygous calls within the mlst loci as this would indicate a sample with a mix of cdiff strains.
+Genome read depth and some quality stats are then calculated. 
+
+
 The pipeline uses these tools:
 
 QC
@@ -24,6 +31,9 @@ AMRG Annotation
  - Abricate v0.8
  - AMRFinderPlus v3.11.2
  - BLASTN vs C. difficile curated AMR database
+
+Species Identification
+ - Kraken2
 
 ## Installation
 Requires a local installation of 
@@ -108,7 +118,7 @@ nextflow run main.nf -entry cdiff_hcgmlst_amrg_blastn_single --reads "./example_
 ```
 
 ---
-Arun Decano, Jeremy Swann & David Eyre
+Arun Decano, Jeremy Swann, David Eyre, and Matthew Colpus
 
 arun_decano@ndm.ox.ac.uk
 david.eyre@bdi.ox.ac.uk 
