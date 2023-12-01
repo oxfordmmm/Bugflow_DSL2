@@ -674,10 +674,8 @@ process REFMASK {
 	path(refFasta)
 
 	output:
-    path("${refFasta.baseName}.rpt_mask.gz"), emit: masked_ref
-    path("${refFasta.baseName}.rpt_mask.hdr"), emit: masked_ref_hdr
+    tuple path("${refFasta.baseName}.rpt_mask.gz"), path("${refFasta.baseName}.rpt_mask.hdr"), emit: masked_ref
     
-	
 
 	script:
 	"""
@@ -767,6 +765,8 @@ process MPILEUP {
 
 	//use bcftools mpileup to generate vcf file
 	//mpileup genearates the likelihood of each base at each site
+    //has several QC parameters
+    //WARNING: pileup may not have a row for every site!
  	"""
     bcftools mpileup -Q25 -q30 -E -o40 -e20 -h100 -m2 -F0.002 -Ou -f ${refFasta} ${uuid}.bam > ${uuid}.pileup.bcf
     """
@@ -788,8 +788,8 @@ process SNP_CALL {
  
     output:
     tuple val(uuid), path("${uuid}.bcf"), path("${uuid}.allsites.bcf"), emit: snps_called
-    path("${uuid}.bcf"), emit: bcf
-    path("${uuid}.allsites.bcf"), emit: allsites
+    tuple val(uuid), path("${uuid}.bcf"), emit: bcf
+    tuple val(uuid), path("${uuid}.allsites.bcf"), emit: allsites
     
     publishDir "${params.outdir}/snps_called_bcf", mode: 'copy'
 
@@ -801,13 +801,15 @@ process SNP_CALL {
     script:
 
     """      
-    # call variants only
+    # call and normalise
     # 	-m use multiallelic model
-    # 	-v output variants only
-    bcftools call --prior 0.01 -Ou -m -v ${uuid}.pileup.bcf | bcftools norm -f ${refFasta} -m +any -Ou -o ${uuid}.bcf
-    	
-    # call all sites
-    bcftools call -Ou -m ${uuid}.pileup.bcf | bcftools norm -f ${refFasta} -m +any -Ou -o ${uuid}.allsites.bcf
+    #   filter to remove zero depth sites for consistency, and pileup may not have a row for every site
+    bcftools call --prior 0.01 -Ou -m ${pileup} \
+        | bcftools norm -f ${refFasta} -m +any -Ou \
+        | bcftools filter -e 'DP==0' -Ou -o ${uuid}.allsites.bcf
+    
+    # Just take varaints: -v output variants only
+    bcftools view -v snps,indels,mnps,other -Ou ${uuid}.allsites.bcf -o ${uuid}.bcf
     """
 
 }
@@ -825,35 +827,40 @@ process FILTER_SNPS {
     input:
     tuple val(uuid), path(bcf), path(allsites)
     path(refFasta)
-    path(masked_ref)
-    path(masked_ref_hdr)
+    tuple path(masked_ref), path(masked_ref_hdr)
+    
  
     output:
-    tuple val(uuid), path("${uuid}.snps.vcf.gz"),
-    path("${uuid}.snps.vcf.gz.csi"),
-    path("${uuid}.zero_coverage.vcf.gz"),
-    path("${uuid}.zero_coverage.vcf.gz.csi"), emit: filtered_snps
+    tuple val(uuid), path("${uuid}.snps.vcf.gz"), path("${uuid}.snps.vcf.gz.csi"), emit: filtered_snps
 	
-	//use bcftools to filter normalised bcf file of variants from pileup and call
-	//use one line for each filter condition and label
-	//create index at end for random access and consensus calling
+	/* 
+    use bcftools to filter normalised bcf file of variants from pileup and call
+	use one line for each filter condition and label
+	create index at end for random access and consensus calling
+    */
+
+    /*
+    annotate adds RPT=1 to INFO field for variants in repetitive regions
 	
-	//filters
-		// quality >30
-		// one read in each direction to support variant
-		// not in a repeat region
-		// consensus of >90% reads to support alternative allele
-		// mask SNPs within 7 bp of INDEL
-		// require high quality depth of 5 for call
-	
+    filters are added to FILTER column, with name based on -s
+    -e is exclude and is how the condition is set.
+    -m+ means filter tags are concated rather than replaced
+	filters
+		quality >30
+		one read in each direction to support variant
+		not in a repeat region
+		consensus of >90% reads to support alternative allele
+		mask SNPs within 7 bp of INDEL -- Not included anymore??
+		require high quality depth of 5 for call
+	*/
+
     script:
     """
-    #annotate vcf file with repetitive regions
-	bcftools annotate -a ${refFasta.baseName}.rpt_mask.gz -c CHROM,FROM,TO,RPT \
-    -h ${refFasta.baseName}.rpt_mask.hdr ${uuid}.bcf -Ob -o ${uuid}.masked.bcf.gz
+	bcftools annotate -a ${masked_ref} -c CHROM,FROM,TO,RPT \
+        -h ${masked_ref_hdr} ${bcf} -Ob -o ${uuid}.masked.bcf.gz
     
     #filter vcf
-    bcftools filter -s Q30  -Ou ${uuid}.masked.bcf.gz | 
+    bcftools filter -s Q30 -e 'QUAL < 30' -Ou ${uuid}.masked.bcf.gz | 
         bcftools filter -s HetroZ -e "GT='het'" -m+ -Ou | 
     	bcftools filter -s OneEachWay -e 'DP4[2] == 0 || DP4[3] ==0' -m+ -Ou | 
     	bcftools filter -s RptRegion -e 'RPT=1' -m+ -Ou | 
@@ -861,16 +868,12 @@ process FILTER_SNPS {
     	bcftools filter -s HQDepth5 -e '(DP4[2]+DP4[3])<=5' -m+ -Oz -o ${uuid}.all.vcf.gz
     
     #create vcf file with just SNPs
-    bcftools filter -i 'TYPE="snp"' -m+ -Oz -o ${uuid}.snps.vcf.gz ${uuid}.all.vcf.gz 
+    bcftools view -v snps -Oz -o ${uuid}.snps.vcf.gz ${uuid}.all.vcf.gz
     bcftools index ${uuid}.snps.vcf.gz
     
-    #create vcf file with just INDELs
-    bcftools filter -i 'TYPE!="snp"' -m+ -Oz -o ${uuid}.indels.vcf.gz ${uuid}.all.vcf.gz 
+    #create vcf file with just INDELs (all but snps actually)
+    bcftools view -V snps -Oz -o ${uuid}.indels.vcf.gz ${uuid}.all.vcf.gz
     bcftools index ${uuid}.indels.vcf.gz
-    
-    #create vcf file with just zero depth sites
-    bcftools filter -e 'DP>0' -Oz -o ${uuid}.zero_coverage.vcf.gz ${uuid}.allsites.bcf
-    bcftools index ${uuid}.zero_coverage.vcf.gz
     """
 
 }
@@ -886,32 +889,60 @@ process CONSENSUS_FA {
         publishDir "${params.outdir}/consensus_fa", mode: 'copy'
 
 	    input:
-		tuple val(uuid), path(snps_vcf), path("${uuid}.snps.vcf.gz.csi"), 
-    	path(zerocov_vcf), path("${uuid}.zero_coverage.vcf.gz.csi")
+		tuple val(uuid), path(snps_vcf), path(snps_vcf_index)
 	    path(refFasta)
 	
 	    output:
-		//path("tmp.bcf.gz")
-        //path("tmp.fa")
         tuple val(uuid), path("${uuid}.fa.gz")
 	
 	    
 	    // call consensus sequence
 		// -S flag in bcftools filter sets GT (genotype) to missing, with -M flag here
 		// setting value to N
+        // -H 1 sets haploid calling to use the first genotype. Has not effect as 
+        // Het calls are filtered out above
 	    """
+        bcftools --version
 	    #create a temporary bcf file with genotype of filtered variants set to .
-	    bcftools filter -S . -e 'FILTER != "PASS"' -Ob -o tmp.bcf.gz ${uuid}.snps.vcf.gz
+	    bcftools filter -S . -e 'FILTER != "PASS"' -Ob -o tmp.bcf.gz ${snps_vcf}
 	    bcftools index tmp.bcf.gz
 	
 	    #create consensus file with all the sites set to . above replaced as N
-	    cat ${refFasta} | bcftools consensus -H 1 -M "N" tmp.bcf.gz > tmp.fa
-	
-	    #set all the sites with zero coverage to be -
-	    samtools faidx tmp.fa 
-	    cat tmp.fa | bcftools consensus -H 1 -M "-" ${uuid}.zero_coverage.vcf.gz > ${uuid}.fa
+	    bcftools consensus -f ${refFasta} -H 1 -M "N" tmp.bcf.gz > ${uuid}.fa
         gzip ${uuid}.fa
 	    """
+}
+
+process DETAILED_CONSENSUS_FA {
+        /*
+        Combines outputs to produce a detailed consensus fasta file
+        Uses extra letters:
+        - N = no coverage
+        - F = filtered
+        - R = repeat region
+        - H = heterozygous
+        - X = null genotype
+        */
+        label 'biopython'
+        publishDir "${params.outdir}/consensus_fa", mode: 'copy'
+
+	    input:
+		tuple val(uuid), path(consensus_fasta_gz), path(snps_vcf_gz),
+            path(snps_vcf_index), path(all_bcf)
+	    tuple path(masked_ref_gz), path(masked_ref_hdr)
+	
+	    output:
+        tuple val(uuid), path("${uuid}.full.fa.gz")  
+	    
+	    """
+        gzip -dc ${consensus_fasta_gz} > consensus.fa
+        gzip -dc ${snps_vcf_gz} > snps.vcf
+        bcftools view ${all_bcf} > allsites.vcf
+        gzip -dc ${masked_ref_gz} > masked_ref.tsv
+	    make_detailed_consensus.py -f consensus.fa -s snps.vcf -a allsites.vcf \
+         -r masked_ref.tsv -o ${uuid}.full.fa
+        gzip ${uuid}.full.fa
+        """
 }
 
 /*
