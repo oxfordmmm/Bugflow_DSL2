@@ -47,6 +47,7 @@ include { FIND_MIXED_SITES } from './modules/processes-bugflow_dsl2.nf'
 include { KRAKEN2 } from './modules/processes-bugflow_dsl2.nf'
 include { COUNT_BASES_CALLED } from './modules/processes-bugflow_dsl2.nf'
 include { GENOME_DEPTH } from './modules/processes-bugflow_dsl2.nf'
+include { DETAILED_CONSENSUS_FA } from './modules/processes-bugflow_dsl2.nf'
 /*
 #==============================================
 Parameters
@@ -107,7 +108,7 @@ workflow cdiff_mapping_snpCalling_DE {
        REMOVE_DUPLICATES(BWA.out)
        MPILEUP(REMOVE_DUPLICATES.out.dup_removed.combine(refFasta))
        SNP_CALL(MPILEUP.out.pileup.combine(refFasta))
-       FILTER_SNPS(SNP_CALL.out.snps_called, refFasta, REFMASK.out.masked_ref, REFMASK.out.masked_ref_hdr)
+       FILTER_SNPS(SNP_CALL.out.snps_called, refFasta, REFMASK.out.masked_ref)
        //FILTER_SNPS.out.filtered_snps.view()
        CONSENSUS_FA(FILTER_SNPS.out.filtered_snps, refFasta)
        //MSA(CONSENSUS_FA.out.collect())
@@ -115,7 +116,12 @@ workflow cdiff_mapping_snpCalling_DE {
               refFasta,
               params.mlst_loci)
        GENOME_DEPTH(REMOVE_DUPLICATES.out.dup_removed)
-       COUNT_BASES_CALLED(CONSENSUS_FA.out) 
+       COUNT_BASES_CALLED(CONSENSUS_FA.out)
+
+       for_detailed_ch = CONSENSUS_FA.out
+              .join(FILTER_SNPS.out.filtered_snps)
+              .join(SNP_CALL.out.allsites)
+       DETAILED_CONSENSUS_FA(for_detailed_ch, REFMASK.out.masked_ref)
 }
 
 
@@ -203,6 +209,7 @@ workflow cdiff_hcgmlst_amrg_blastn_single {
        KRAKEN2(FASTP.out.reads, params.kraken2_db)
 }
 
+// Extra single step workflows used when developing
 workflow kraken2 {
        Channel.fromFilePairs(params.reads, checkIfExists: true)
            .map{it}
