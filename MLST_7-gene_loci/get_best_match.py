@@ -16,4 +16,4 @@ if __name__ == '__main__':
     start = min(max_bitscore_row['sstart'], max_bitscore_row['send'])
     end = max(max_bitscore_row['sstart'], max_bitscore_row['send'])
 
-    print(f"{max_bitscore_row['qseqid']}\t{max_bitscore_row['length']}\t{start}\t{end}")
+    print(f"{max_bitscore_row['sseqid']}\t{max_bitscore_row['qseqid']}\t{max_bitscore_row['length']}\t{start}\t{end}")

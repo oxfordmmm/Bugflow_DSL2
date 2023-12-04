@@ -924,7 +924,7 @@ process DETAILED_CONSENSUS_FA {
         - X = null genotype
         */
         label 'biopython'
-        publishDir "${params.outdir}/consensus_fa", mode: 'copy'
+        publishDir "${params.outdir}/consensus_full", mode: 'copy'
 
 	    input:
 		tuple val(uuid), path(consensus_fasta_gz), path(snps_vcf_gz),
@@ -933,6 +933,7 @@ process DETAILED_CONSENSUS_FA {
 	
 	    output:
         tuple val(uuid), path("${uuid}.full.fa.gz")  
+        tuple val(uuid), path("${uuid}.simple.fa.gz")  
 	    
 	    """
         gzip -dc ${consensus_fasta_gz} > consensus.fa
@@ -941,7 +942,8 @@ process DETAILED_CONSENSUS_FA {
         gzip -dc ${masked_ref_gz} > masked_ref.tsv
 	    make_detailed_consensus.py -f consensus.fa -s snps.vcf -a allsites.vcf \
          -r masked_ref.tsv -o ${uuid}.full.fa
-        gzip ${uuid}.full.fa
+        seqkit replace -p "H|F|X|R" -r "N" -s ${uuid}.full.fa > ${uuid}.simple.fa
+        gzip ${uuid}.*.fa
         """
 }
 

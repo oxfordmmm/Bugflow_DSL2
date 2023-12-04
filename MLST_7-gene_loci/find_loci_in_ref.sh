@@ -19,7 +19,7 @@ then
 fi
 
 
-echo -e "loci\tlength\tstart\tend" > $2
+echo -e "chrom\tloci\tlength\tstart\tend" > $2
 for gene in *.fas
 do
     name=$(basename $gene .fas)
