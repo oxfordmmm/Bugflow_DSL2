@@ -18,4 +18,4 @@ nextflow run Bugflow_DSL2 -entry cdiff_hcgmlst_amrg_blastn_single --reads $input
 
 cd $run_dir/mapping
 nextflow run Bugflow_DSL2 -entry cdiff_mapping_snpCalling_DE --reads $input \
-    --refFasta $ref --mlst_loci $ref_mlst --outdir $output_dir/mapping -profile docker,oci
+    --ref $ref --mlst_loci $ref_mlst --outdir $output_dir/mapping -profile docker,oci

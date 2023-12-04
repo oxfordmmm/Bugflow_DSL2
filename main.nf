@@ -54,8 +54,8 @@ Parameters
 #==============================================
 */
 
-params.ref = "$projectDir/refs/Cdiff_630_GCA_000009205.1.fasta"
-params.mlst_loci = "$projectDir/refs/Cdiff_630_GCA_000009205.1.mlst_loci.tsv"
+params.ref = " "
+params.mlst_loci = " "
 params.reads = " "
 params.outdir = " "
 params.contigs = " "
