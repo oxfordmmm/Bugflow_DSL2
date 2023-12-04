@@ -54,14 +54,14 @@ Parameters
 #==============================================
 */
 
-params.ref = "/mnt/arun_in_bucket/REFSEQ_Cdiff/Cdiff_630_GCA_000009205.1.fasta"
-params.reads = "/mnt/arun_in_bucket/UKHSA_test/*{1,2}_001.fastq.gz"
+params.ref = "$projectDir/refs/Cdiff_630_GCA_000009205.1.fasta"
+params.mlst_loci = "$projectDir/refs/Cdiff_630_GCA_000009205.1.mlst_loci.tsv"
+params.reads = " "
 params.outdir = " "
 params.contigs = " "
 params.mlstdb = "cdifficile"
 params.prefix = "core"
 params.blastn = " "
-params.mlst_loci = "$projectDir/refs/Cdiff_630_GCA_000009205.1.mlst_loci.tsv"
 params.kraken2_db="/mnt/scratch/databases/k2_standard_8gb"
 
 /*
