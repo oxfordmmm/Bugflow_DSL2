@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
+echo "building docker images matching *$1.Dockerfile"
+
 base_image="docker/bugflow_base.Dockerfile"
 echo "building base image $base_image"
 docker build -f $base_image -t oxfordmmm/bugflow_base .
-for file in $(find docker -iname "*.Dockerfile" -type f -maxdepth 1)
+for file in $(find docker -iname "*$1.Dockerfile" -type f -maxdepth 1)
 do
     if [ $file != $base_image ]
     then

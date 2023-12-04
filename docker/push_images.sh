@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
+echo "pushing docker images matching *$1.Dockerfile"
+
 base_image="docker/bugflow_base.Dockerfile"
 echo "Pushing base image $base_image"
 docker push oxfordmmm/bugflow_base
-for file in $(find docker -iname "*.Dockerfile" -type f -maxdepth 1)
+for file in $(find docker -iname "*$1.Dockerfile" -type f -maxdepth 1)
 do
     if [ $file != $base_image ]
     then
