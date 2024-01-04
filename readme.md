@@ -60,42 +60,14 @@ Clone the repository locally
 git clone https://github.com/aedecano/Bugflow_DSL2
 ```
 
-Get the docker image
-This can be pulled from docker hub
+### Docker
+To run with docker profile you will need to create the docker images. This can be done with:
 ```
-docker pull 
-```
-
-Alternatively the docker image can be built from the Dockerfile. Within the cloned repository:
-```
-cd docker
-docker build -t .
-```
-Note the tag has to match in the `nextflow.config` file.
-
-## Running the the pipeline
-
-Bugflow DSL2 has subworkflows for screening and de novo assembly of short reads and accurately calling variants.
-
-To clean and de novo assemble raw Illumina reads:
-
-```
-nextflow run main_bugflow_dsl2.nf -entry shovill --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]"
+./docker/create_images.sh
 ```
 
-To call high-quality SNPs from clean reads (customized for C. difficile isolates:):
-
-```
-nextflow run main_bugflow_dsl2.nf -entry cdiff_mapping_snpCalling_DE --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
-```
-
-To call high-quality SNPs from assembled genomes (contigs):
-
-```
-nextflow run main_bugflow_dsl2.nf -entry snippy_fasta --reads "[path-to-reads]/*{1,2}.fastq.gz" --outdir "[output_directory]" --ref "[you_reference_sequence.fasta]"
-```
-
-## Running the subworkflows on example data
+## Running the the pipeline (on example data)
+See the [bash script](example_run.sh) for example script to use. Note that there are different profiles for running bugflow. Can either use conda or docker.
 
 The "example_data" folder included in this repository should contain 2 sets of fastq files. Download these pairs from ENA.
 
@@ -109,19 +81,20 @@ wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/004/SRR3349174/SRR3349174_2.fastq
 Screen and assemble the example reads
 
 ```
-nextflow run main.nf -entry cdiff_hcgmlst_amrg_blastn_single --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output"
+nextflow run main.nf -entry cdiff_cgmlst --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output" -profile conda
 ```
 
-Alternatively to resume a partially completed run where the intermediate files have been saved:
+And for the mapping workflow:
 ```
-nextflow run main.nf -entry cdiff_hcgmlst_amrg_blastn_single --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output" -resume
+nextflow run main.nf -entry cdiff_mapping --reads "./example_data/*{1,2}.fastq.gz" --outdir "Example_output" --ref refs/Cdiff_630_GCA_000009205.1.fasta --mlst_loci refs/Cdiff_630_GCA_000009205.1.mlst_loci.tsv -profile conda
 ```
 
 ---
 Arun Decano, Jeremy Swann, David Eyre, and Matthew Colpus
 
-arun_decano@ndm.ox.ac.uk
-david.eyre@bdi.ox.ac.uk 
-crookcs.it@ndm.ox.ac.uk
+arun_decano@ndm.ox.ac.uk, 
+david.eyre@bdi.ox.ac.uk, 
+crookcs.it@ndm.ox.ac.uk, 
+matthew.colpus@ndm.ox.ac.uk
 
 October 2022
