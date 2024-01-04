@@ -11,6 +11,7 @@ def add_extra_characters(fasta_file, snps_vcf, allsites_vcf, repeat_mask, output
     fasta_data = SeqIO.read(fasta_file, 'fasta')
     seq = MutableSeq(fasta_data.seq)
     ref_length = len(seq)
+    print(f"Reference length: {ref_length}")
 
     # Find all zero depth positions, according to allsites vcf
     allsites_df = pd.read_csv(allsites_vcf, sep='\t', comment="#", header=None,
@@ -35,7 +36,6 @@ def add_extra_characters(fasta_file, snps_vcf, allsites_vcf, repeat_mask, output
     snps_df = pd.read_csv(snps_vcf, sep='\t', comment="#", header=None,
                           names=['chrome', 'POS', 'id', 'ref', 'alt', 'qual', 
                                  'filter', 'info', 'format', 'sample'])
-    print(snps_df.head())
     filtered_locations = set(snps_df[snps_df['filter'] != 'PASS']['POS'])
     het_positions = set(snps_df[snps_df['filter'].str.contains('HetroZ')]['POS'])
     null_gt_positions = set(snps_df[snps_df['sample'].str.contains('./.', regex=False)]['POS'])
@@ -44,10 +44,11 @@ def add_extra_characters(fasta_file, snps_vcf, allsites_vcf, repeat_mask, output
     # Replace in order of precedence
     already_changed = set()
     position_lists = [repeat_positions, zero_positions, null_gt_positions, het_positions, filtered_locations]
-    characters = ['R', 'N', 'X', 'H', 'F']
-    for pos_list, character in zip(position_lists, characters):
+    characters = ['R', 'Z', 'X', 'H', 'F']
+    descriptions = ['repeat', 'zero depth', 'null genotype', 'heterozygous', 'filtered']
+    for pos_list, character, desc in zip(position_lists, characters, descriptions):
         pos_list -= already_changed
-        print("Replacing {} positions with {}".format(len(pos_list), character))
+        print(f"{desc} ({character}): {len(pos_list)} ({100 * len(pos_list)/ref_length:.2f}%)")
         for position in pos_list:
             seq[position-1] = character
         already_changed = already_changed | pos_list

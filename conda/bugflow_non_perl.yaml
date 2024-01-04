@@ -1,8 +1,10 @@
 name: non_perl_env
 channels:
+  - conda-forge
   - bioconda
   - defaults
 dependencies:
+  - python=3.10
   - fastp
   - fasttree
   - multiqc
