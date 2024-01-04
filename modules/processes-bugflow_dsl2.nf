@@ -680,7 +680,7 @@ process REFMASK {
 	script:
 	"""
     makeblastdb -dbtype nucl -in ${refFasta}
-    /mnt/scratch/workflows/Bugflow_DSL2/bin/genRefMask.py -r ${refFasta} -m 200 -p 95
+    genRefMask.py -r ${refFasta} -m 200 -p 95
     bgzip -c ${refFasta}.rpt.regions > ${refFasta.baseName}.rpt_mask.gz
 	echo '##INFO=<ID=RPT,Number=1,Type=Integer,Description="Flag for variant in repetitive region">' > ${refFasta.baseName}.rpt_mask.hdr
 	tabix -s1 -b2 -e3 ${refFasta.baseName}.rpt_mask.gz
@@ -886,7 +886,6 @@ Generate a consensus FASTA file
 
 process CONSENSUS_FA {
         label 'blast'
-        publishDir "${params.outdir}/consensus_fa", mode: 'copy'
 
 	    input:
 		tuple val(uuid), path(snps_vcf), path(snps_vcf_index)
@@ -917,14 +916,18 @@ process DETAILED_CONSENSUS_FA {
         /*
         Combines outputs to produce a detailed consensus fasta file
         Uses extra letters:
-        - N = no coverage
+        - Z = zero coverage
         - F = filtered
         - R = repeat region
         - H = heterozygous
         - X = null genotype
+
+        In the simple output Z and R get converted to -, and the rest to N
         */
         label 'biopython'
-        publishDir "${params.outdir}/consensus_full", mode: 'copy'
+        publishDir "${params.outdir}/consensus_full", mode: 'copy', pattern: "*.full.fa.gz"
+        publishDir "${params.outdir}/consensus_simple", mode: 'copy', pattern: "*.simple.fa.gz"
+        publishDir "${params.outdir}/consensus_qc", mode: 'copy', pattern: "*txt"
 
 	    input:
 		tuple val(uuid), path(consensus_fasta_gz), path(snps_vcf_gz),
@@ -932,17 +935,22 @@ process DETAILED_CONSENSUS_FA {
 	    tuple path(masked_ref_gz), path(masked_ref_hdr)
 	
 	    output:
-        tuple val(uuid), path("${uuid}.full.fa.gz")  
-        tuple val(uuid), path("${uuid}.simple.fa.gz")  
+        tuple val(uuid), path("${uuid}.full.fa.gz"), emit: detailed
+        tuple val(uuid), path("${uuid}.simple.fa.gz"), emit: simple
+        tuple val(uuid), path("${uuid}_bases.txt"), emit: base_counts
 	    
 	    """
         gzip -dc ${consensus_fasta_gz} > consensus.fa
         gzip -dc ${snps_vcf_gz} > snps.vcf
         bcftools view ${all_bcf} > allsites.vcf
         gzip -dc ${masked_ref_gz} > masked_ref.tsv
+
 	    make_detailed_consensus.py -f consensus.fa -s snps.vcf -a allsites.vcf \
-         -r masked_ref.tsv -o ${uuid}.full.fa
-        seqkit replace -p "H|F|X|R" -r "N" -s ${uuid}.full.fa > ${uuid}.simple.fa
+         -r masked_ref.tsv -o ${uuid}.full.fa > ${uuid}_bases.txt
+
+        seqkit replace -p "H|F|X" -r "N" -s ${uuid}.full.fa | \
+            seqkit replace -p "Z|R" -r "-" -s - > ${uuid}.simple.fa
+
         gzip ${uuid}.*.fa
         """
 }
