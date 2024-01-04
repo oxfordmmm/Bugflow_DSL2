@@ -1,5 +1,6 @@
-name: perl_env
+name: mob_suite
 channels:
+  - conda-forge
   - bioconda
   - defaults
 dependencies:
