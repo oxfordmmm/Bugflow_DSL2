@@ -926,7 +926,7 @@ process DETAILED_CONSENSUS_FA {
         */
         label 'biopython'
         publishDir "${params.outdir}/consensus_full", mode: 'copy', pattern: "*.full.fa.gz"
-        publishDir "${params.outdir}/consensus_simple", mode: 'copy', pattern: "*.simple.fa.gz"
+        publishDir "${params.outdir}/consensus_fa", mode: 'copy', pattern: "${uuid}.fa.gz"
         publishDir "${params.outdir}/consensus_qc", mode: 'copy', pattern: "*txt"
 
 	    input:
@@ -949,7 +949,7 @@ process DETAILED_CONSENSUS_FA {
          -r masked_ref.tsv -o ${uuid}.full.fa > ${uuid}_bases.txt
 
         seqkit replace -p "H|F|X" -r "N" -s ${uuid}.full.fa | \
-            seqkit replace -p "Z|R" -r "-" -s - > ${uuid}.simple.fa
+            seqkit replace -p "Z|R" -r "-" -s - > ${uuid}.fa
 
         gzip ${uuid}.*.fa
         """
