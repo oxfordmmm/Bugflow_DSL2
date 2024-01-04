@@ -214,6 +214,7 @@ De novo assembly
 process ASSEMBLY {
 	tag { "assemble ${uuid}" }
     label 'shovill'
+    cpus 4
 
     publishDir "$params.outdir/assemblies/", mode: "copy"
 
@@ -694,7 +695,7 @@ Map reads to Reference genome using BWA
 */
 
 process BWA {
-	cpus 8
+	cpus 4
     label 'blast'
 	
     tag { "map clean ${uuid} reads to reference" }
@@ -723,7 +724,6 @@ Remove duplicates using Samtools v.1.9
 */
 
 process REMOVE_DUPLICATES {
-    cpus 4
     label 'blast'
 	tag "remove duplicates ${uuid}"
 	
