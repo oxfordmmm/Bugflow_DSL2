@@ -925,22 +925,22 @@ process DETAILED_CONSENSUS_FA {
         In the simple output Z and R get converted to -, and the rest to N
         */
         label 'biopython'
-        publishDir "${params.outdir}/consensus_full", mode: 'copy', pattern: "*.full.fa.gz"
-        publishDir "${params.outdir}/consensus_simple", mode: 'copy', pattern: "*.simple.fa.gz"
+        publishDir "${params.outdir}/consensus_full", mode: 'copy', pattern: "${uuid}.full.fa.gz"
+        publishDir "${params.outdir}/consensus_fa", mode: 'copy', pattern: "${uuid}.fa.gz"
         publishDir "${params.outdir}/consensus_qc", mode: 'copy', pattern: "*txt"
 
 	    input:
-		tuple val(uuid), path(consensus_fasta_gz), path(snps_vcf_gz),
+		tuple val(uuid), path("initial_consensus.fa.gz"), path(snps_vcf_gz),
             path(snps_vcf_index), path(all_bcf)
 	    tuple path(masked_ref_gz), path(masked_ref_hdr)
 	
 	    output:
         tuple val(uuid), path("${uuid}.full.fa.gz"), emit: detailed
-        tuple val(uuid), path("${uuid}.simple.fa.gz"), emit: simple
+        tuple val(uuid), path("${uuid}.fa.gz"), emit: simple
         tuple val(uuid), path("${uuid}_bases.txt"), emit: base_counts
 	    
 	    """
-        gzip -dc ${consensus_fasta_gz} > consensus.fa
+        gzip -dc initial_consensus.fa.gz > consensus.fa
         gzip -dc ${snps_vcf_gz} > snps.vcf
         bcftools view ${all_bcf} > allsites.vcf
         gzip -dc ${masked_ref_gz} > masked_ref.tsv
@@ -949,9 +949,10 @@ process DETAILED_CONSENSUS_FA {
          -r masked_ref.tsv -o ${uuid}.full.fa > ${uuid}_bases.txt
 
         seqkit replace -p "H|F|X" -r "N" -s ${uuid}.full.fa | \
-            seqkit replace -p "Z|R" -r "-" -s - > ${uuid}.simple.fa
+            seqkit replace -p "Z|R" -r "-" -s - > ${uuid}.fa
 
-        gzip ${uuid}.*.fa
+        gzip ${uuid}.full.fa
+        gzip ${uuid}.fa
         """
 }
 
